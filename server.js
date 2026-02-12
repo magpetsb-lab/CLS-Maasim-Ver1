@@ -40,7 +40,7 @@ app.use(express.static(__dirname, {
 
 // 4. CLOUD DATABASE CONNECTION
 // Use DATABASE_URL from environment variables with a fallback for local development.
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Gs_minad2026@127.0.0.1:5432/legislative_system';
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Gs_minad20261@127.0.0.1:5432/legislative_system';
 
 const pool = new Pool({
   connectionString: connectionString,
