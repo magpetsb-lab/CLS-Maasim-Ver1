@@ -1,0 +1,26 @@
+
+{
+  "name": "Maasim Legislative System",
+  "short_name": "Maasim-CLS",
+  "description": "Computerized Legislative Management System for LGU Maasim",
+  "id": "/legislative-system-app",
+  "start_url": ".",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#eff6ff",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "maasim-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "maasim-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
