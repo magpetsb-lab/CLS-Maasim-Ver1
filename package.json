@@ -1,6 +1,6 @@
 {
   "name": "legislative-system-maasim",
-  "version": "1.4.3",
+  "version": "1.4.6",
   "description": "Computerized Legislative System for LGU Maasim",
   "main": "server.js",
   "scripts": {

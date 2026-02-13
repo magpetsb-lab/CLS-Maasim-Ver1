@@ -139,7 +139,10 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 relative z-10">
                     <div>
                         <h2 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">Database</h2>
-                        <p className="text-slate-500 text-sm mt-2 font-medium">Search and manage approved legislative records.</p>
+                        <div className="flex items-center gap-3 mt-2">
+                            <p className="text-slate-500 text-sm font-medium">Search and manage approved legislative records.</p>
+                            <span className="bg-slate-100 text-slate-400 text-[10px] px-2 py-0.5 rounded font-mono">v1.4.6</span>
+                        </div>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
                         <div className="flex-grow md:w-96">
