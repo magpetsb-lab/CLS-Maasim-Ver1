@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
 const os = require('os');
+const packageJson = require('./package.json');
 
 // Force Node.js to prioritize IPv4 for DNS resolution.
 require('dns').setDefaultResultOrder('ipv4first');
@@ -80,6 +81,7 @@ app.get('/api/health', async (req, res) => {
         await pool.query('SELECT 1');
         res.json({ 
             status: 'ok', 
+            version: packageJson.version,
             database: 'connected', 
             environment: process.env.NODE_ENV || 'development'
         });
@@ -163,14 +165,15 @@ module.exports = app;
 
 if (require.main === module) {
     app.listen(PORT, '0.0.0.0', async () => {
-        const dbStatus = await initDb();
         console.clear();
         console.log(`\x1b[34m╔══════════════════════════════════════════════════════════════╗\x1b[0m`);
         console.log(`\x1b[34m║          LEGISLATIVE DATA BRIDGE SERVER IS RUNNING           ║\x1b[0m`);
         console.log(`\x1b[34m╚══════════════════════════════════════════════════════════════╝\x1b[0m`);
         
+        console.log(`\x1b[36m[SYSTEM]\x1b[0m Version: ${packageJson.version}`);
         console.log(`\x1b[36m[SYSTEM]\x1b[0m Server listening on port: ${PORT}`);
 
+        const dbStatus = await initDb();
         if (dbStatus.ok) {
             console.log(`\x1b[32m[SUCCESS]\x1b[0m Database Linked: ONLINE`);
         } else {
