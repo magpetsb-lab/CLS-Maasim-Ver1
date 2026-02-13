@@ -107,16 +107,11 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
         <div className="flex flex-col lg:flex-row items-center justify-between gap-13">
             <div className="flex items-center space-x-13">
                 <div className="flex-shrink-0">
-                    <img 
-                         src="https://raw.githubusercontent.com/magpetsb-lab/CLS-Maasim-Ver1/main/maasim-logo.png?raw=true" 
-                            alt="Municipality of Maasim Seal" 
-                            className="object-contain"
-                            style={{ width: '1.4in', height: '1.4in' }}
-                             onError={(e) => {
-                            console.error("Image failed to load from GitHub");
-                            // Optional: fallback to a placeholder if it fails
-                         e.currentTarget.src = "https://via.placeholder.com/150?text=Logo+Error";
-    }}
+                   <img 
+    src="/maasim-logo.png" 
+    alt="Municipality of Maasim Seal" 
+    className="object-contain"
+    style={{ width: '1.4in', height: '1.4in' }}
 />
                 </div>
                 <div className="flex flex-col">
