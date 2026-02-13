@@ -36,7 +36,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({ result }) => {
                             {result.type}
                         </span>
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-800">
-                           File Record No: {result.number}
+                           {result.type === 'Resolution' ? 'Res. No:' : 'Ord. No:'} {result.number}
                         </span>
                     </div>
                     <h3 className="text-lg font-bold text-brand-primary">{result.title}</h3>

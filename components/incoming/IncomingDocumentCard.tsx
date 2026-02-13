@@ -70,7 +70,7 @@ const IncomingDocumentCard: React.FC<IncomingDocumentCardProps> = ({ document, o
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-3 mb-2">
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">File Record No: {document.referenceNumber}</span>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">Ref No: {document.referenceNumber}</span>
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColor}`}>{document.status}</span>
                         <span className="text-xs text-slate-500">Received: {document.dateReceived}</span>
                     </div>

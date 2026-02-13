@@ -22,7 +22,7 @@ const CommitteeReportCard: React.FC<CommitteeReportCardProps> = ({ committeeRepo
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-4 mb-2">
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-800">
-                           File Record No: {committeeReport.reportNumber}
+                           Report No: {committeeReport.reportNumber}
                         </span>
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                             Term: {formatTerm(committeeReport.term)}

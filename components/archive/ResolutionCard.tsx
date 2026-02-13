@@ -20,7 +20,7 @@ const ResolutionCard: React.FC<ResolutionCardProps> = ({ resolution, onEdit, onD
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-4 mb-2">
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                           File Record No: {resolution.resolutionNumber}
+                           Res. No: {resolution.resolutionNumber}
                         </span>
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                            Term: {formatTerm(resolution.term)}
