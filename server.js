@@ -27,7 +27,13 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // 4. CLOUD DATABASE CONNECTION
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Gs_minad20261@db.glssiawyikytmmuaxtti.supabase.co:5432/postgres';
+// SECURITY UPDATE: Removed hardcoded connection string. 
+// You MUST set DATABASE_URL in your Vercel Environment Variables.
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+    console.warn('[SYSTEM] No DATABASE_URL provided. API endpoints will fail, but static frontend will serve.');
+}
 
 const pool = new Pool({
   connectionString: connectionString,
@@ -35,7 +41,7 @@ const pool = new Pool({
   max: 10,   
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  ssl: (connectionString.includes('supabase') || connectionString.includes('neon.tech') || process.env.NODE_ENV === 'production') 
+  ssl: (connectionString && (connectionString.includes('supabase') || connectionString.includes('neon.tech') || process.env.NODE_ENV === 'production')) 
        ? { rejectUnauthorized: false } 
        : false
 });
@@ -45,6 +51,8 @@ pool.on('error', (err) => {
 });
 
 async function initDb() {
+    if (!connectionString) return { ok: false, error: "Missing DATABASE_URL" };
+    
     let client;
     try {
         client = await pool.connect();
@@ -68,6 +76,7 @@ async function initDb() {
 // 5. API ENDPOINTS
 app.get('/api/health', async (req, res) => {
     try {
+        if (!connectionString) throw new Error("Server missing DATABASE_URL configuration.");
         await pool.query('SELECT 1');
         res.json({ 
             status: 'ok', 
@@ -166,6 +175,7 @@ if (require.main === module) {
             console.log(`\x1b[32m[SUCCESS]\x1b[0m Database Linked: ONLINE`);
         } else {
             console.log(`\x1b[31m[ERROR]\x1b[0m Database Error: ${dbStatus.error}`);
+            console.log(`\x1b[33m[WARNING]\x1b[0m App running in OFFLINE mode (Serverless Static)`);
         }
         
         console.log(`\nLocal URL: http://localhost:${PORT}`);
