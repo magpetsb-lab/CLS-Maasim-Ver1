@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface SearchResult {
@@ -16,7 +15,6 @@ interface SearchResultCardProps {
 
 const SearchResultCard: React.FC<SearchResultCardProps> = ({ result }) => {
     const typeColor = result.type === 'Resolution' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
-    const typeLabel = result.type === 'Resolution' ? 'Res No' : 'Ord No';
 
     const handlePrint = () => {
         if (!result.filePath) {
@@ -38,7 +36,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({ result }) => {
                             {result.type}
                         </span>
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-800">
-                           {typeLabel}: {result.number}
+                           File Record No: {result.number}
                         </span>
                     </div>
                     <h3 className="text-lg font-bold text-brand-primary">{result.title}</h3>

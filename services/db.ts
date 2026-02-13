@@ -1,4 +1,3 @@
-
 import { 
     MOCK_RESOLUTIONS, MOCK_ORDINANCES, MOCK_SESSION_MINUTES, 
     MOCK_SESSION_AGENDAS, MOCK_COMMITTEE_REPORTS, MOCK_LEGISLATORS, 
@@ -8,24 +7,64 @@ import {
 } from '../constants';
 
 const DB_NAME = 'LegislativeSystemDB';
-const DB_VERSION = 1;
-const INIT_FLAG = 'leg_sys_initialized';
+const DB_VERSION = 2;
+const INIT_FLAG = 'leg_sys_initialized_v2';
 
-export const STORES = [
+const ALL_STORES = [
     'resolutions', 'ordinances', 'sessionMinutes', 
     'sessionAgendas', 'committeeReports', 'legislators', 
     'committeeMemberships', 'terms', 'sectors', 
     'legislativeMeasures', 'documentTypes', 'documentStatuses', 
-    'userAccounts', 'incomingDocuments'
+    'userAccounts', 'incomingDocuments', 'syncQueue'
 ];
+
+const SEEDABLE_STORES = ALL_STORES.filter(s => s !== 'syncQueue');
+
+interface SyncQueueItem {
+    id: number;
+    operation: 'put' | 'delete';
+    storeName: string;
+    payload: any;
+}
+
+export type SyncStatus = {
+    connection: 'offline' | 'connected';
+    queueSize: number;
+};
 
 export class LegislativeDB {
     private db: IDBDatabase | null = null;
     private serverUrl: string | null = null;
+    private syncInterval: number | null = null;
+
+    private status: SyncStatus = { connection: 'offline', queueSize: 0 };
+    private listeners: ((status: SyncStatus) => void)[] = [];
 
     constructor() {
         const storedUrl = localStorage.getItem('remote_server_url');
-        this.serverUrl = storedUrl; // Will be null if not set, forcing offline mode initially.
+        this.serverUrl = storedUrl;
+    }
+
+    public subscribe(listener: (status: SyncStatus) => void) {
+        this.listeners.push(listener);
+        listener(this.status);
+    }
+
+    public unsubscribe(listener: (status: SyncStatus) => void) {
+        this.listeners = this.listeners.filter(l => l !== listener);
+    }
+
+    private notifyListeners() {
+        this.listeners.forEach(listener => listener(this.status));
+    }
+
+    private setStatus(newStatus: Partial<SyncStatus>) {
+        this.status = { ...this.status, ...newStatus };
+        this.notifyListeners();
+    }
+
+    public getStatus(): SyncStatus {
+        return this.status;
     }
 
     async init(): Promise<void> {
@@ -35,21 +74,28 @@ export class LegislativeDB {
             request.onupgradeneeded = (event) => {
                 const req = event.target as IDBOpenDBRequest;
                 const db = req.result;
-                STORES.forEach(storeName => {
+                ALL_STORES.forEach(storeName => {
                     if (!db.objectStoreNames.contains(storeName)) {
-                        db.createObjectStore(storeName, { keyPath: 'id' });
+                        const keyPath = storeName === 'syncQueue' ? { autoIncrement: true, keyPath: 'id' } : { keyPath: 'id' };
+                        db.createObjectStore(storeName, keyPath);
                     }
                 });
             };
 
             request.onsuccess = async (event) => {
                 this.db = (event.target as IDBOpenDBRequest).result;
+                const queueTx = this.db.transaction('syncQueue', 'readonly');
+                const queueCountReq = queueTx.objectStore('syncQueue').count();
+                queueCountReq.onsuccess = () => this.setStatus({ queueSize: queueCountReq.result });
+
                 const isInitialized = localStorage.getItem(INIT_FLAG);
                 if (!isInitialized) {
-                    console.log('[DB] First time setup: Seeding mock data...');
+                    console.log('[DB] First time setup (v2): Seeding mock data...');
                     await this.seedFullSystem();
                     localStorage.setItem(INIT_FLAG, 'true');
                 }
+                
+                this.startSyncProcessor();
                 resolve();
             };
 
@@ -59,15 +105,29 @@ export class LegislativeDB {
             };
         });
     }
+    
+    async testAndSetConnection(url: string): Promise<{ success: boolean; error?: string }> {
+        const cleanUrl = url.trim().replace(/\/$/, '');
+        try {
+            await this.apiRequest('/api/health', 'GET', undefined, cleanUrl);
+            this.setServerUrl(cleanUrl);
+            this.processSyncQueue();
+            return { success: true };
+        } catch (e: any) {
+            this.setServerUrl(null); // Explicitly go offline if test fails
+            return { success: false, error: e.message };
+        }
+    }
 
     setServerUrl(url: string | null) {
-        if (url !== null) { // Allow setting empty string for same-origin
-            const cleanUrl = url.trim().replace(/\/$/, '');
-            localStorage.setItem('remote_server_url', cleanUrl);
-            this.serverUrl = cleanUrl;
+        if (url !== null) {
+            localStorage.setItem('remote_server_url', url);
+            this.serverUrl = url;
+            this.setStatus({ connection: 'connected' });
         } else {
             localStorage.removeItem('remote_server_url');
             this.serverUrl = null;
+            this.setStatus({ connection: 'offline' });
         }
     }
 
@@ -76,7 +136,7 @@ export class LegislativeDB {
     }
 
     private async seedFullSystem() {
-        await Promise.all(STORES.map(name => {
+        await Promise.all(SEEDABLE_STORES.map(name => {
             const mockData = {
                 'resolutions': MOCK_RESOLUTIONS, 'ordinances': MOCK_ORDINANCES, 
                 'sessionMinutes': MOCK_SESSION_MINUTES, 'sessionAgendas': MOCK_SESSION_AGENDAS, 
@@ -98,13 +158,17 @@ export class LegislativeDB {
         return new Promise((resolve) => tx.oncomplete = resolve);
     }
 
-    private async apiRequest(path: string, method: string = 'GET', body?: any) {
-        if (this.serverUrl === null) return null;
+    private async apiRequest(path: string, method: string = 'GET', body?: any, testUrl?: string) {
+        const url = testUrl !== undefined ? testUrl : this.serverUrl;
+        if (url === null) {
+            this.setStatus({ connection: 'offline' });
+            throw new Error('OFFLINE: No server URL configured.');
+        }
         
         const isAppSecure = window.location.protocol === 'https:';
-        const isServerInsecure = this.serverUrl.startsWith('http:');
+        const isServerInsecure = url.startsWith('http:');
         
-        if (isAppSecure && isServerInsecure && !this.serverUrl.includes('localhost') && !this.serverUrl.includes('127.0.0.1')) {
+        if (isAppSecure && isServerInsecure && !url.includes('localhost') && !url.includes('127.0.0.1')) {
             throw new Error('MIXED_CONTENT_BLOCK: Browsers block HTTPS to HTTP connections. Use an HTTPS server URL.');
         }
 
@@ -113,12 +177,9 @@ export class LegislativeDB {
             const timeout = path.includes('export') ? 300000 : 15000;
             const id = setTimeout(() => controller.abort(), timeout);
             
-            const response = await fetch(`${this.serverUrl}${path}`, {
+            const response = await fetch(`${url}${path}`, {
                 method,
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: body ? JSON.stringify(body) : undefined,
                 signal: controller.signal,
                 mode: 'cors'
@@ -128,16 +189,69 @@ export class LegislativeDB {
             
             if (!response.ok) {
                 let errorDetails = response.statusText;
-                try {
-                    const errorJson = await response.json();
-                    errorDetails = errorJson.reason || errorJson.error || errorDetails;
-                } catch (e) {}
+                try { errorDetails = (await response.json()).reason || errorDetails; } catch (e) {}
                 throw new Error(`Server Error ${response.status}: ${errorDetails}`);
             }
-            return await response.json();
+            this.setStatus({ connection: 'connected' });
+            return response.status === 204 ? {} : await response.json();
         } catch (e: any) {
+            this.setStatus({ connection: 'offline' });
             if (e.name === 'AbortError') throw new Error('TIMEOUT: Server taking too long to respond.');
             throw e; 
+        }
+    }
+
+    private async addToSyncQueue(item: Omit<SyncQueueItem, 'id'>) {
+        return new Promise<void>((resolve, reject) => {
+            if (!this.db) return reject('DB not initialized');
+            const tx = this.db.transaction('syncQueue', 'readwrite');
+            const store = tx.objectStore('syncQueue');
+            const request = store.add(item);
+            request.onsuccess = () => {
+                this.setStatus({ queueSize: this.status.queueSize + 1 });
+                resolve();
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    private startSyncProcessor() {
+        if (this.syncInterval) clearInterval(this.syncInterval);
+        this.processSyncQueue(); 
+        this.syncInterval = window.setInterval(() => this.processSyncQueue(), 30000);
+    }
+
+    async processSyncQueue(): Promise<void> {
+        if (this.serverUrl === null || !this.db) return;
+
+        const tx = this.db.transaction('syncQueue', 'readwrite');
+        const store = tx.objectStore('syncQueue');
+        const items = await new Promise<SyncQueueItem[]>((resolve) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result as SyncQueueItem[]);
+            req.onerror = () => resolve([]);
+        });
+        
+        if (items.length !== this.status.queueSize) {
+            this.setStatus({ queueSize: items.length });
+        }
+        if (items.length === 0) return;
+        
+        console.log(`[SYNC] Processing ${items.length} queued operations.`);
+
+        for (const item of items) {
+            try {
+                if (item.operation === 'put') {
+                    await this.apiRequest(`/api/${item.storeName}`, 'POST', item.payload);
+                } else if (item.operation === 'delete') {
+                    await this.apiRequest(`/api/${item.storeName}/${item.payload.id}`, 'DELETE');
+                }
+                store.delete(item.id);
+                this.setStatus({ queueSize: this.status.queueSize - 1 });
+            } catch (e) {
+                console.warn(`[SYNC] Failed to process queue item ${item.id}. Will retry later.`, e);
+                break;
+            }
         }
     }
 
@@ -169,39 +283,41 @@ export class LegislativeDB {
 
     async put(storeName: string, data: any): Promise<void> {
         await new Promise<void>((resolve, reject) => {
-            if (!this.db) return resolve();
+            if (!this.db) return reject('DB not initialized');
             const tx = this.db.transaction(storeName, 'readwrite');
-            const store = tx.objectStore(storeName);
-            const request = store.put(data);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+            tx.objectStore(storeName).put(data);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
         });
 
         if (this.serverUrl !== null) {
             try {
                 await this.apiRequest(`/api/${storeName}`, 'POST', data);
             } catch (e) {
-                console.warn("[API] Sync put failed.", e);
+                await this.addToSyncQueue({ operation: 'put', storeName, payload: data });
             }
+        } else {
+            await this.addToSyncQueue({ operation: 'put', storeName, payload: data });
         }
     }
 
     async delete(storeName: string, id: string): Promise<void> {
         await new Promise<void>((resolve, reject) => {
-            if (!this.db) return resolve();
+            if (!this.db) return reject('DB not initialized');
             const tx = this.db.transaction(storeName, 'readwrite');
-            const store = tx.objectStore(storeName);
-            const request = store.delete(id);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+            tx.objectStore(storeName).delete(id);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
         });
 
         if (this.serverUrl !== null) {
             try {
                 await this.apiRequest(`/api/${storeName}/${id}`, 'DELETE');
             } catch (e) {
-                console.warn("[API] Sync delete failed.", e);
+                await this.addToSyncQueue({ operation: 'delete', storeName, payload: { id } });
             }
+        } else {
+            await this.addToSyncQueue({ operation: 'delete', storeName, payload: { id } });
         }
     }
 
@@ -213,7 +329,7 @@ export class LegislativeDB {
 
     async exportLocalDatabase(): Promise<string> {
         const exportData: Record<string, any[]> = {};
-        for (const storeName of STORES) {
+        for (const storeName of SEEDABLE_STORES) {
             exportData[storeName] = await this.getAllFromLocal(storeName);
         }
         return JSON.stringify({ 
@@ -227,12 +343,12 @@ export class LegislativeDB {
         if (!this.db) return;
         const backup = JSON.parse(backupJson);
         const data = backup.data;
-        for (const storeName of STORES) {
+        for (const storeName of ALL_STORES) {
             const tx = this.db.transaction(storeName, 'readwrite');
             tx.objectStore(storeName).clear();
             await new Promise((resolve) => tx.oncomplete = resolve);
         }
-        for (const storeName of STORES) {
+        for (const storeName of SEEDABLE_STORES) {
             const items = data[storeName] || [];
             for (const item of items) {
                 await this.put(storeName, item);
@@ -242,7 +358,7 @@ export class LegislativeDB {
 
     async clearAndReset(): Promise<void> {
         if (!this.db) return;
-        for (const storeName of STORES) {
+        for (const storeName of ALL_STORES) {
             const tx = this.db.transaction(storeName, 'readwrite');
             const store = tx.objectStore(storeName);
             store.clear();

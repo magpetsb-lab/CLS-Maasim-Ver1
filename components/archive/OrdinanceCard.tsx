@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { Ordinance } from '../../types';
 
@@ -21,7 +20,7 @@ const OrdinanceCard: React.FC<OrdinanceCardProps> = ({ ordinance, onEdit, onDele
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-4 mb-2">
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                           Ord No: {ordinance.ordinanceNumber}
+                           File Record No: {ordinance.ordinanceNumber}
                         </span>
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                            Term: {formatTerm(ordinance.term)}

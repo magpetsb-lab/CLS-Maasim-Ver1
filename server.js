@@ -21,12 +21,19 @@ try {
 
 // 2. MIDDLEWARE
 // Enable CORS for all origins, which is suitable for Vercel's preview/production deployments.
-app.use(cors({
+const corsOptions = {
     origin: true, 
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-}));
+};
+
+// Pre-flight OPTIONS requests handler. This is critical for CORS to work reliably.
+app.options('*', cors(corsOptions));
+
+// Main CORS middleware for all other requests.
+app.use(cors(corsOptions));
+
 // Increase JSON payload limit for potential large data syncs.
 app.use(express.json({ limit: '100mb' }));
 

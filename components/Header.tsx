@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserAccount } from '../types';
-import { dbService } from '../services/db';
+import { dbService, SyncStatus } from '../services/db';
 
 type View = 'main' | 'settings' | 'archive' | 'reports' | 'incoming' | 'ai';
 
@@ -36,58 +35,66 @@ const NavButton: React.FC<{
 
 const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, onLoginClick, onLogout }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [dbStatus, setDbStatus] = useState<'connected' | 'offline'>('offline');
-
-  const checkStatus = useCallback(async () => {
-      const url = dbService.getServerUrl();
-      if (url === null) {
-          setDbStatus('offline');
-          return;
-      }
-      try {
-          const res = await fetch(`${url}/api/health`);
-          setDbStatus(res.ok ? 'connected' : 'offline');
-      } catch {
-          setDbStatus('offline');
-      }
-  }, []);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(dbService.getStatus());
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
 
-    checkStatus();
-    const statusTimer = setInterval(checkStatus, 10000);
+    const handleStatusUpdate = (status: SyncStatus) => setSyncStatus(status);
+    dbService.subscribe(handleStatusUpdate);
 
     return () => {
       clearInterval(timer);
-      clearInterval(statusTimer);
+      dbService.unsubscribe(handleStatusUpdate);
     };
-  }, [checkStatus]);
+  }, []);
 
-  const formattedDate = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(currentTime);
+  const getStatusContent = () => {
+    const { connection, queueSize } = syncStatus;
+    if (connection === 'connected') {
+        if (queueSize > 0) {
+            return {
+                icon: <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-spin"></div>,
+                text: `SYNCING (${queueSize})`,
+                color: 'text-yellow-200'
+            };
+        }
+        return {
+            icon: <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"></div>,
+            text: 'ONLINE SYNC',
+            color: 'text-blue-200'
+        };
+    } else { // offline
+        if (queueSize > 0) {
+            return {
+                icon: <div className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></div>,
+                text: `LOCAL CACHE (${queueSize} UNSYNCED)`,
+                color: 'text-rose-200'
+            };
+        }
+        return {
+            icon: <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>,
+            text: 'LOCAL CACHE',
+            color: 'text-blue-200'
+        };
+    }
+  };
 
+  const status = getStatusContent();
+  const formattedDate = new Intl.DateTimeFormat('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(currentTime);
   const formattedTime = currentTime.toLocaleTimeString('en-US');
 
   return (
     <header className="bg-brand-primary text-white shadow-2xl border-b-4 border-blue-400/20 relative overflow-hidden">
-      {/* Decorative background element */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl pointer-events-none"></div>
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
-        {/* Top Utility Bar */}
         <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/10">
             <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-3">
-                    <div className={`w-2.5 h-2.5 rounded-full ${dbStatus === 'connected' ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]' : 'bg-rose-50 animate-pulse'}`}></div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-200">
-                        System Base: {dbStatus === 'connected' ? 'ONLINE SYNC' : 'LOCAL CACHE'}
+                    {status.icon}
+                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${status.color}`}>
+                        System Base: {status.text}
                     </span>
                 </div>
             </div>
@@ -97,20 +104,16 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
             </div>
         </div>
 
-        {/* Main Brand Section - Official Stationary Style */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-13">
             <div className="flex items-center space-x-13">
-                {/* 1.4 INCH LOGO WITHOUT WHITE CIRCLE CONTAINER */}
                 <div className="flex-shrink-0">
                     <img 
-                        src="https://raw.githubusercontent.com/GeloHub-ai/CLS-Maasim/main/maasim-logo.png" 
+                        src="https://raw.githubusercontent.com/magpetsb-lab/CLS-Maasim-Ver1/main/maasim-logo.png" 
                         alt="Municipality of Maasim Seal" 
                         className="object-contain"
                         style={{ width: '1.4in', height: '1.4in' }}
                     />
                 </div>
-
-                {/* Header Text Section */}
                 <div className="flex flex-col">
                     <h2 className="text-sm font-black text-blue-300 uppercase tracking-[0.3em] mb-1">
                         Municipality of Maasim
@@ -127,7 +130,6 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
                 </div>
             </div>
 
-            {/* Navigation & Auth */}
             <div className="flex flex-col items-center lg:items-end gap-4">
                 <nav className="flex items-center space-x-1 bg-blue-950/60 p-1.5 rounded-2xl backdrop-blur-xl border border-white/10 shadow-2xl">
                     <NavButton label="Main" isActive={currentView === 'main'} onClick={() => onNavigate('main')} />

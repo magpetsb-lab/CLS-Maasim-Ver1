@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { SessionMinute, AttendanceStatus } from '../../types';
 
@@ -29,7 +28,7 @@ const SessionMinuteCard: React.FC<SessionMinuteCardProps> = ({ sessionMinute, on
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-4 mb-2">
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-800">
-                           Session No: {sessionMinute.sessionNumber}
+                           File Record No: {sessionMinute.sessionNumber}
                         </span>
                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                            Term: {formatTerm(sessionMinute.term)}

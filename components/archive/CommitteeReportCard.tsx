@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { CommitteeReport } from '../../types';
 
@@ -23,7 +22,7 @@ const CommitteeReportCard: React.FC<CommitteeReportCardProps> = ({ committeeRepo
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-4 mb-2">
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-800">
-                           Report No: {committeeReport.reportNumber}
+                           File Record No: {committeeReport.reportNumber}
                         </span>
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                             Term: {formatTerm(committeeReport.term)}
@@ -47,7 +46,7 @@ const CommitteeReportCard: React.FC<CommitteeReportCardProps> = ({ committeeRepo
                             aria-label="View attached file"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M8 4a3 30 0 00-3 3v4a3 3 0 006 0V7a1 1 0 112 0v4a5 5 0 01-10 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                                <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a3 3 0 006 0V7a1 1 0 112 0v4a5 5 0 01-10 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
                             </svg>
                             View Attachment
                         </a>

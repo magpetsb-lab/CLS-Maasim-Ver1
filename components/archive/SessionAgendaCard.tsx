@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { SessionAgenda } from '../../types';
 
@@ -24,7 +23,7 @@ const SessionAgendaCard: React.FC<SessionAgendaCardProps> = ({ sessionAgenda, on
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-4 mb-2">
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-800">
-                           Series No: {sessionAgenda.seriesNumber}
+                           File Record No: {sessionAgenda.seriesNumber}
                         </span>
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                            Term: {formatTerm(sessionAgenda.term)}

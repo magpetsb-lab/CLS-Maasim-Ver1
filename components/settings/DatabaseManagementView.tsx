@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { dbService } from '../../services/db';
+import { dbService, SyncStatus } from '../../services/db';
 
 interface DatabaseManagementViewProps {
     onDatabaseAction: () => void;
@@ -25,6 +24,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
     });
     const [isDownloading, setIsDownloading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const [queueSize, setQueueSize] = useState(0);
 
     const addLog = (msg: string) => {
         setDiagnosticLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 10));
@@ -48,49 +48,40 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
     };
 
     useEffect(() => {
+        const handleStatusUpdate = (status: SyncStatus) => {
+            setQueueSize(status.queueSize);
+            setConnectionStatus(status.connection === 'connected' ? 'CONNECTED' : connectionStatus === 'TESTING' ? 'TESTING' : 'IDLE');
+        };
+        dbService.subscribe(handleStatusUpdate);
+        
         const initialUrl = dbService.getServerUrl();
-        if (initialUrl !== null) {
+        if (initialUrl) {
             setServerUrl(initialUrl);
-            checkConnection(initialUrl);
+            checkConnection(initialUrl, true); // Initial quiet check
         }
         updatePermissionStatuses();
+        
+        return () => dbService.unsubscribe(handleStatusUpdate);
     }, []);
 
-    const checkConnection = async (customUrl?: string) => {
+    const checkConnection = async (customUrl?: string, isInitialCheck = false) => {
         const urlToTest = typeof customUrl === 'string' ? customUrl.trim().replace(/\/$/, '') : serverUrl.trim().replace(/\/$/, '');
         
         setServerUrl(urlToTest);
         setConnectionStatus('TESTING');
         setErrorDetails(null);
-        addLog(`Initiating handshake with: ${urlToTest || 'integrated API'}`);
+        if (!isInitialCheck) addLog(`Initiating handshake with: ${urlToTest || 'internal API'}`);
         
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const res = await fetch(`${urlToTest}/api/health`, { method: 'GET', mode: 'cors', signal: controller.signal });
-            
-            clearTimeout(timeoutId);
-            
-            if (res.ok) {
-                dbService.setServerUrl(urlToTest);
-                setConnectionStatus('CONNECTED');
-                addLog("SUCCESS: Cloud Synchronization Link Active.");
-                onDatabaseAction(); 
-            } else {
-                setConnectionStatus('FAILED');
-                const errJson = await res.json().catch(() => ({}));
-                setErrorDetails(errJson.hint || errJson.message || `Server responded with status ${res.status}.`);
-                addLog(`FAILED: ${errJson.hint || 'Server rejected request.'}`);
-            }
-        } catch (e: any) {
+        const result = await dbService.testAndSetConnection(urlToTest);
+
+        if (result.success) {
+            setConnectionStatus('CONNECTED');
+            if (!isInitialCheck) addLog("SUCCESS: Cloud Synchronization Link Active.");
+            onDatabaseAction();
+        } else {
             setConnectionStatus('FAILED');
-            if (window.location.protocol === 'https:' && urlToTest.startsWith('http:')) {
-                setErrorDetails("SECURITY BLOCK (Mixed Content): Your app is on HTTPS, but your target server is HTTP. You must use an HTTPS server URL.");
-            } else {
-                setErrorDetails(e.message || "Network Error: Ensure the server is running and the URL is correct and accessible.");
-            }
-            addLog(`ERROR: Connection could not be established.`);
+            setErrorDetails(result.error || "An unknown network error occurred.");
+            if (!isInitialCheck) addLog(`ERROR: Connection could not be established.`);
         }
     };
 
@@ -178,24 +169,31 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                         connectionStatus === 'CONNECTED' ? 'bg-emerald-50 border-emerald-500' : 
                         connectionStatus === 'FAILED' ? 'bg-rose-50 border-rose-500' : 'bg-slate-50 border-slate-200'
                     }`}>
-                        <div className="flex items-center gap-6">
-                            <div className={`p-5 rounded-3xl shadow-lg ${connectionStatus === 'CONNECTED' ? 'bg-emerald-600' : connectionStatus === 'FAILED' ? 'bg-rose-600' : 'bg-brand-primary'}`}><svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></div>
-                            <div className="flex-grow">
-                                <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Cloud Gateway</h3>
-                                <p className="text-slate-500 font-bold text-[10px] tracking-widest uppercase">{connectionStatus === 'CONNECTED' ? 'SYNC ONLINE' : 'OFFLINE MODE'}</p>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                                <div className={`p-5 rounded-3xl shadow-lg ${connectionStatus === 'CONNECTED' ? 'bg-emerald-600' : connectionStatus === 'FAILED' ? 'bg-rose-600' : 'bg-brand-primary'}`}><svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></div>
+                                <div className="flex-grow">
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Cloud Gateway</h3>
+                                    <p className="text-slate-500 font-bold text-[10px] tracking-widest uppercase">{connectionStatus === 'CONNECTED' ? 'SYNC ONLINE' : 'OFFLINE MODE'}</p>
+                                </div>
+                            </div>
+                             <div className="text-right">
+                                <p className="text-2xl font-black text-slate-800">{queueSize}</p>
+                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Pending Sync Operations</p>
                             </div>
                         </div>
+
 
                         <div className="flex flex-col sm:flex-row gap-3">
                             <div className="relative flex-grow">
                                 <input type="text" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-xs focus:border-brand-primary outline-none shadow-inner" placeholder="https://your-server-url.com" />
                                 {window.location.hostname.endsWith('.vercel.app') && (
                                     <p className="text-xs text-slate-500 mt-2 px-1">
-                                        <b>Tip:</b> If your server is also on Vercel, leave this empty and click Sync.
+                                        <b>Tip:</b> If your server is also on Vercel, leave this empty and click Connect.
                                     </p>
                                 )}
                             </div>
-                            <button onClick={() => checkConnection()} disabled={connectionStatus === 'TESTING'} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all active:scale-95 shadow-lg">{connectionStatus === 'TESTING' ? 'WAITING...' : 'SYNC NOW'}</button>
+                            <button onClick={() => checkConnection()} disabled={connectionStatus === 'TESTING'} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all active:scale-95 shadow-lg">{connectionStatus === 'TESTING' ? 'CONNECTING...' : 'Save & Connect'}</button>
                         </div>
                     </div>
 
@@ -244,7 +242,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                             <div className="pl-16 space-y-3">
                                 <p className="text-sm text-slate-600 leading-relaxed">Use this if your frontend is on Vercel but your `server.js` is hosted on a different platform like Railway or a local machine with Ngrok.</p>
                                  <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
-                                    <li><b>Connection:</b> In the "Cloud Gateway" section, enter the <b>full HTTPS URL</b> provided by your backend host (e.g., `https://my-api.up.railway.app`) and click "Sync Now".</li>
+                                    <li><b>Connection:</b> In the "Cloud Gateway" section, enter the <b>full HTTPS URL</b> provided by your backend host (e.g., `https://my-api.up.railway.app`) and click "Save & Connect".</li>
                                     <li><b>Troubleshooting:</b> If you get a "Mixed Content" error, your URL must start with <b className="text-rose-600">https://</b>, not `http://`. Vercel requires secure connections. If you get a network error, ensure your backend server is running and the URL is correct.</li>
                                 </ul>
                             </div>
