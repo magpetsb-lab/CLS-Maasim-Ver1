@@ -108,7 +108,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
             <div className="flex items-center space-x-13">
                 <div className="flex-shrink-0">
                  <img 
-                    src="/maasim-logo.png" 
+                    src="src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg" 
                     alt="Municipality of Maasim Seal" 
                     className="w-[1.4in] h-[1.4in] object-contain"
                 />
