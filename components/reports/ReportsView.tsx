@@ -387,17 +387,28 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
     };
 
     const getBase64Logo = async (): Promise<string | null> => {
-        try {
-            const response = await fetch('/maasim-logo.png');
-            if (response.ok) {
-                const blob = await response.blob();
-                return await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.readAsDataURL(blob);
-                });
+        // Updated to try multiple paths for robustness on GitHub Pages
+        const candidates = [
+            '/CLS-Maasim-Ver1/maasim-logo.png', // GitHub Pages default
+            '/maasim-logo.png', // Root
+            'maasim-logo.png' // Relative
+        ];
+        
+        for (const url of candidates) {
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    return await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result as string);
+                        reader.readAsDataURL(blob);
+                    });
+                }
+            } catch (e) {
+                // Ignore error and try next candidate
             }
-        } catch (error) {}
+        }
         return null;
     };
 
@@ -822,12 +833,22 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                     <div className="flex flex-col items-center mb-6">
                         <div className="flex items-center gap-2 mb-2">
                             <img 
-                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Seal_of_the_Municipality_of_Maasim.png/720px-Seal_of_the_Municipality_of_Maasim.png?20220126092704" 
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Seal_of_the_Municipality_of_Maasim.png/720px-Seal_of_the_Municipality_of_Maasim.png" 
                               alt="Municipality of Maasim Seal" 
                               className="object-contain"
                               style={{ width: '1.2in', height: '1.2in' }}
                               onError={(e) => {
-                                  e.currentTarget.src = "maasim-logo.png"; 
+                                  const target = e.currentTarget;
+                                  if (target.src.includes('wikimedia')) {
+                                      // First fallback: GitHub Pages path
+                                      target.src = "/CLS-Maasim-Ver1/maasim-logo.png";
+                                  } else if (target.src.includes('CLS-Maasim-Ver1')) {
+                                      // Second fallback: Local/Relative path
+                                      target.src = "maasim-logo.png";
+                                  } else {
+                                      // Give up to prevent infinite loop
+                                      target.onerror = null;
+                                  }
                               }}
                             />
                             <div className="text-center sm:text-left border-l-2 border-slate-200 pl-4">

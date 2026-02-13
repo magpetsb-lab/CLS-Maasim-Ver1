@@ -108,7 +108,20 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
             <div className="flex items-center space-x-13">
                 <div className="flex-shrink-0">
                  <img 
-                    src="./maasim-logo.png"
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Seal_of_the_Municipality_of_Maasim.png/720px-Seal_of_the_Municipality_of_Maasim.png"
+                    onError={(e) => {
+                        const target = e.currentTarget;
+                        if (target.src.includes('wikimedia')) {
+                            // First fallback: GitHub Pages path
+                            target.src = "/CLS-Maasim-Ver1/maasim-logo.png";
+                        } else if (target.src.includes('CLS-Maasim-Ver1')) {
+                            // Second fallback: Local/Relative path
+                            target.src = "maasim-logo.png";
+                        } else {
+                            // Give up to prevent infinite loop
+                            target.onerror = null;
+                        }
+                    }}
                     alt="Municipality of Maasim Seal" 
                     className="w-[1.4in] h-[1.4in] object-contain"
                 />
