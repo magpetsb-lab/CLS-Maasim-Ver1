@@ -107,12 +107,11 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
         <div className="flex flex-col lg:flex-row items-center justify-between gap-13">
             <div className="flex items-center space-x-13">
                 <div className="flex-shrink-0">
-                   <img 
-    src="/maasim-logo.png" 
-    alt="Municipality of Maasim Seal" 
-    className="object-contain"
-    style={{ width: '1.4in', height: '1.4in' }}
-/>
+                 <img 
+                    src="/maasim-logo.png" 
+                    alt="Municipality of Maasim Seal" 
+                    className="w-[1.4in] h-[1.4in] object-contain"
+                />
                 </div>
                 <div className="flex flex-col">
                     <h2 className="text-sm font-black text-blue-300 uppercase tracking-[0.3em] mb-1">
