@@ -5,22 +5,12 @@ const path = require('path');
 const os = require('os');
 
 // Force Node.js to prioritize IPv4 for DNS resolution.
-// This is a robust fix for ENETUNREACH errors on IPv6-problematic networks.
 require('dns').setDefaultResultOrder('ipv4first');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// 1. MIME TYPE CONFIGURATION
-// Ensure .tsx files are served with the correct JavaScript MIME type.
-try {
-    express.static.mime.define({ 'application/javascript': ['tsx', 'ts'] });
-} catch (e) {
-    console.warn('[SYSTEM] MIME type definition warning:', e.message);
-}
-
 // 2. MIDDLEWARE
-// Enable CORS for all origins, which is suitable for Vercel's preview/production deployments.
 const corsOptions = {
     origin: true, 
     credentials: true,
@@ -28,45 +18,32 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 };
 
-// Pre-flight OPTIONS requests handler. This is critical for CORS to work reliably.
 app.options('*', cors(corsOptions));
-
-// Main CORS middleware for all other requests.
 app.use(cors(corsOptions));
-
-// Increase JSON payload limit for potential large data syncs.
 app.use(express.json({ limit: '100mb' }));
 
 // 3. STATIC FILE SERVING
-// Serve the frontend application files from the root directory.
-app.use(express.static(__dirname, {
-    setHeaders: (res, path) => {
-        if (path.endsWith('.tsx')) res.setHeader('Content-Type', 'application/javascript');
-    }
-}));
+// Serve the built frontend files from the 'dist' directory.
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // 4. CLOUD DATABASE CONNECTION
-// Use DATABASE_URL from environment variables with a fallback for local development.
 const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Gs_minad20261@db.glssiawyikytmmuaxtti.supabase.co:5432/postgres';
 
 const pool = new Pool({
   connectionString: connectionString,
-  family: 4, // Force IPv4 to prevent network issues.
-  max: 10,   // Limit concurrent connections to avoid exhausting database resources.
+  family: 4, 
+  max: 10,   
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  // Enable SSL for cloud databases (Supabase, Neon, etc.) and in production environments.
   ssl: (connectionString.includes('supabase') || connectionString.includes('neon.tech') || process.env.NODE_ENV === 'production') 
        ? { rejectUnauthorized: false } 
        : false
 });
 
-// Log unexpected database errors.
 pool.on('error', (err) => {
     console.error('[DB_POOL] Unexpected error on idle client:', err.message);
 });
 
-// Initialize the database schema on startup if the table doesn't exist.
 async function initDb() {
     let client;
     try {
@@ -89,7 +66,6 @@ async function initDb() {
 }
 
 // 5. API ENDPOINTS
-// Health check endpoint to verify server and database connectivity.
 app.get('/api/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
@@ -108,7 +84,6 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
-// Endpoint to export all data from the cloud database as a JSON backup.
 app.get('/api/system/export', async (req, res) => {
     try {
         const result = await pool.query('SELECT store_name, content FROM legislative_data');
@@ -130,7 +105,6 @@ app.get('/api/system/export', async (req, res) => {
     }
 });
 
-// Generic GET endpoint to retrieve all items from a specific data store.
 app.get('/api/:store', async (req, res) => {
     try {
         const result = await pool.query(
@@ -143,7 +117,6 @@ app.get('/api/:store', async (req, res) => {
     }
 });
 
-// Generic POST endpoint to create or update (upsert) an item in a data store.
 app.post('/api/:store', async (req, res) => {
     try {
         const { store } = req.params;
@@ -161,7 +134,6 @@ app.post('/api/:store', async (req, res) => {
     }
 });
 
-// Generic DELETE endpoint to remove an item from a data store by its ID.
 app.delete('/api/:store/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM legislative_data WHERE id = $1', [req.params.id]);
@@ -172,20 +144,14 @@ app.delete('/api/:store/:id', async (req, res) => {
 });
 
 // 6. SPA ROUTING FALLBACK
-// This catch-all route ensures that any non-API, non-file request is handled by the React app.
+// Serve index.html from dist for any unknown paths (Client-side routing support)
 app.get('*', (req, res) => {
-    if (path.extname(req.path)) {
-        return res.status(404).send('Not Found');
-    }
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // 7. EXPORT & SERVER STARTUP
-// Export the Express app for Vercel's serverless environment.
 module.exports = app;
 
-// Start the server only when this file is run directly (for local development).
-// This block is ignored by Vercel.
 if (require.main === module) {
     app.listen(PORT, '0.0.0.0', async () => {
         const dbStatus = await initDb();
