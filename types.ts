@@ -109,17 +109,28 @@ export interface IncomingDocument {
   type: string;
   category?: 'General' | 'Annual Budget' | 'Supplemental Budget';
   status: string;
+  statusDate?: string;
   remarks?: string;
   filePath?: string;
 
-  // Calendar of Business
+  // Calendar of Business / Legislative Actions
   urgentMattersDate?: string;
   unfinishedBusinessDate?: string;
   unassignedBusinessDate?: string;
-  concernedCommittee?: string;
+  
+  // First Reading
   firstReadingDate?: string;
+  firstReadingRemarks?: string;
+  concernedCommittee?: string;
+  committeeReferralChairman?: string;
+
+  // Second Reading
   secondReadingDate?: string;
+  secondReadingRemarks?: string;
+
+  // Third Reading
   thirdReadingDate?: string;
+  thirdReadingRemarks?: string;
 
   // Legislative Output
   outputType?: 'Resolution' | 'Ordinance';

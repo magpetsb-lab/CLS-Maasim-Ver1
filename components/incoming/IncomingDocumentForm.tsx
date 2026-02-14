@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import type { IncomingDocument, DocumentType, DocumentStatus, CommitteeMembership, Legislator } from '../../types';
+import { getAIAssistantResponse } from '../../services/geminiService';
 
 interface IncomingDocumentFormProps {
     initialData?: IncomingDocument | null;
@@ -22,15 +23,23 @@ const getInitialFormData = (): Omit<IncomingDocument, 'id'> => ({
     type: '',
     category: undefined,
     status: 'Pending',
+    statusDate: '',
     
-    // Calendar of Business
+    // Calendar of Business / Legislative Actions
     urgentMattersDate: '',
     unfinishedBusinessDate: '',
-    firstReadingDate: '',
-    concernedCommittee: '',
-    secondReadingDate: '',
-    thirdReadingDate: '',
     unassignedBusinessDate: '',
+    
+    firstReadingDate: '',
+    firstReadingRemarks: '',
+    concernedCommittee: '',
+    committeeReferralChairman: '',
+
+    secondReadingDate: '',
+    secondReadingRemarks: '',
+
+    thirdReadingDate: '',
+    thirdReadingRemarks: '',
 
     // Legislative Output
     outputType: undefined,
@@ -74,6 +83,10 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
     const [showSecretarySuggestions, setShowSecretarySuggestions] = useState(false);
     const [filteredSecretaries, setFilteredSecretaries] = useState<string[]>([]);
 
+    // Findings Report State
+    const [findingsContent, setFindingsContent] = useState('');
+    const [isGeneratingFindings, setIsGeneratingFindings] = useState(false);
+
     useEffect(() => {
         if (initialData) {
             setFormData({ ...getInitialFormData(), ...initialData });
@@ -81,6 +94,7 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
              setFormData(getInitialFormData());
         }
         setAttachment(null);
+        setFindingsContent('');
     }, [initialData]);
 
     const uniqueSenders = useMemo(() => {
@@ -153,13 +167,29 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => {
-            const newData = { ...prev, [name]: value };
-            if (name === 'status' && value !== 'Referred to Committee') {
-                newData.concernedCommittee = '';
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleCommitteeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const committeeName = e.target.value;
+        let chairmanName = '';
+
+        if (committeeName) {
+            // Find the membership for this committee (closest match to current term/date)
+            // Simplified logic: Find the first matching committee name from memberships
+            // In a real app, you'd match the termYear carefully
+            const membership = committeeMemberships.find(cm => cm.committeeName === committeeName);
+            if (membership && membership.chairman) {
+                const chairman = legislators.find(l => l.id === membership.chairman);
+                if (chairman) chairmanName = chairman.name;
             }
-            return newData;
-        });
+        }
+
+        setFormData(prev => ({ 
+            ...prev, 
+            concernedCommittee: committeeName,
+            committeeReferralChairman: chairmanName
+        }));
     };
 
     const handleActionCheckboxChange = (action: string, checked: boolean) => {
@@ -282,21 +312,186 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
 
     const deadlineInfo = useMemo(() => {
         if (!formData.dateReceived || !formData.timeReceived || !formData.category || !['Barangay Ordinance', 'Proposed Ordinance'].includes(formData.type)) return null;
+        
         let dayLimit = 0;
+        let legalBasis = '';
+
         if (formData.type === 'Barangay Ordinance') {
-            if (formData.category === 'General') dayLimit = 30;
-            else dayLimit = 60;
+            if (formData.category === 'General') {
+                dayLimit = 30;
+                legalBasis = 'Sec. 56, RA 7160';
+            } else if (['Annual Budget', 'Supplemental Budget'].includes(formData.category)) {
+                dayLimit = 60;
+                legalBasis = 'Sec. 333, RA 7160';
+            }
         } else if (formData.type === 'Proposed Ordinance') {
-            if (formData.category === 'General') dayLimit = 30;
-            else dayLimit = 90;
+            if (formData.category === 'General') {
+                dayLimit = 30;
+                legalBasis = 'Sec. 56, RA 7160';
+            } else if (['Annual Budget', 'Supplemental Budget'].includes(formData.category)) {
+                dayLimit = 90;
+                legalBasis = 'Sec. 327, RA 7160';
+            }
         }
+        
         if (dayLimit === 0) return null;
+        
         const received = new Date(`${formData.dateReceived}T${formData.timeReceived}`);
         const deadline = new Date(received);
         deadline.setDate(received.getDate() + dayLimit);
         const daysRemaining = Math.round((deadline.getTime() - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
-        return { dayLimit, deadlineDate: deadline, daysRemaining };
+        
+        return { dayLimit, deadlineDate: deadline, daysRemaining, legalBasis };
     }, [formData.dateReceived, formData.timeReceived, formData.type, formData.category]);
+
+    // --- AI Findings Report Logic ---
+    const generateFindings = async () => {
+        if (!deadlineInfo) return;
+        setIsGeneratingFindings(true);
+        
+        const isBudget = ['Annual Budget', 'Supplemental Budget'].includes(formData.category || '');
+        const isBarangayOrMunicipal = ['Barangay Ordinance', 'Proposed Ordinance'].includes(formData.type);
+
+        let specificLegalInstruction = '';
+        
+        if (isBudget && isBarangayOrMunicipal && formData.dateReceived) {
+             // Parse YYYY-MM-DD
+             const parts = formData.dateReceived.split('-');
+             if (parts.length === 3) {
+                 const month = parseInt(parts[1], 10);
+                 const day = parseInt(parts[2], 10);
+                 
+                 // Check if beyond October 16
+                 const isLate = month > 10 || (month === 10 && day > 16);
+
+                 if (isLate) {
+                     specificLegalInstruction = `
+                     CRITICAL OBSERVATION: This Annual Budget was submitted/received on ${formData.dateReceived}, which is BEYOND the October 16th submission period.
+                     You MUST cite **Section 329 of RA 7160** in the findings specifically noting this non-compliance with the prescribed submission date.
+                     `;
+                 } else {
+                     specificLegalInstruction = `
+                     Cite **Section 329 of RA 7160** as the pertinent legal basis for the enactment and review timeline.
+                     `;
+                 }
+             }
+        }
+
+        const prompt = `
+        You are a legislative legal officer of the Sangguniang Bayan of Maasim. Draft a formal "Report of Findings and Recommendations" for the review of a local ordinance.
+        
+        Document Details:
+        - Type: ${formData.type}
+        - Category: ${formData.category || 'General'}
+        - Reference Number: ${formData.referenceNumber}
+        - Subject: ${formData.subject}
+        - Sender/Origin: ${formData.sender}
+        - Date Received: ${formData.dateReceived}
+        - Reglementary Period Requirement: ${deadlineInfo.dayLimit} Days
+        - Legal Basis: ${deadlineInfo.legalBasis}
+        - Target Action Date (Deadline): ${deadlineInfo.deadlineDate.toLocaleDateString()}
+        
+        Current Status:
+        - Days Remaining: ${deadlineInfo.daysRemaining}
+        - Condition: ${deadlineInfo.daysRemaining < 0 ? 'Review Period Lapsed' : 'Within Review Period'}
+        
+        Instructions:
+        1. IF the review period has lapsed (Days Remaining < 0), explicitly state in the Findings that the ordinance is DEEMED APPROVED by operation of law due to inaction, citing the Legal Basis (${deadlineInfo.legalBasis}). The recommendation should reflect this (e.g., issue a certification of approval by operation of law).
+        ${specificLegalInstruction}
+        2. IF it is within the period, state the urgency of the review and the deadline.
+        3. Use a formal, legalistic tone suitable for the Sangguniang Bayan records.
+        4. Structure the report as follows:
+           I. PRELIMINARY INFORMATION (Summary of document)
+           II. FINDINGS OF FACT (Dates, computation of period, lapsed or not${isBudget && specificLegalInstruction.includes('BEYOND') ? ', including late submission analysis' : ''})
+           III. LEGAL ANALYSIS (Application of ${deadlineInfo.legalBasis} ${isBudget ? 'and Section 329 of RA 7160' : ''})
+           IV. RECOMMENDATIONS
+        5. Do NOT use markdown formatting (like ** or ##). Use plain text with clear spacing and UPPERCASE for main headers.
+        `;
+
+        try {
+            const response = await getAIAssistantResponse(prompt);
+            setFindingsContent(response);
+        } catch (e) {
+            alert('Failed to generate findings. Please check your connection.');
+        } finally {
+            setIsGeneratingFindings(false);
+        }
+    };
+
+    const getBase64Logo = async (): Promise<string | null> => {
+        try {
+            const candidates = ['/maasim-logo.png', 'maasim-logo.png', '/CLS-Maasim-Ver1/maasim-logo.png'];
+            for (const src of candidates) {
+                const response = await fetch(src);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    return await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result as string);
+                        reader.readAsDataURL(blob);
+                    });
+                }
+            }
+        } catch (error) {}
+        return null;
+    };
+
+    const handlePrintFindings = async (action: 'preview' | 'print') => {
+        if (!findingsContent) return;
+        if (!(window as any).jspdf) return alert("PDF library not loaded.");
+        
+        try {
+            const { jsPDF } = (window as any).jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const logoData = await getBase64Logo();
+            const pageWidth = 210;
+            const margin = 25;
+            const contentWidth = pageWidth - (margin * 2);
+
+            // Header
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', margin, 10, 20, 20);
+            }
+            doc.setFontSize(10).setFont('helvetica', 'bold').text("MUNICIPALITY OF MAASIM", pageWidth/2 + 10, 15, { align: 'center' });
+            doc.setFontSize(12).text("OFFICE OF THE SANGGUNIANG BAYAN", pageWidth/2 + 10, 20, { align: 'center' });
+            doc.setFontSize(9).setFont('helvetica', 'normal').text("Province of Sarangani", pageWidth/2 + 10, 25, { align: 'center' });
+            
+            doc.setLineWidth(0.5).line(margin, 32, pageWidth - margin, 32);
+
+            // Title
+            doc.setFontSize(14).setFont('helvetica', 'bold').text("COMMITTEE FINDINGS REPORT", pageWidth/2, 45, { align: 'center' });
+            
+            // Content
+            doc.setFontSize(11).setFont('times', 'normal');
+            const splitText = doc.splitTextToSize(findingsContent, contentWidth);
+            
+            let cursorY = 55;
+            const pageHeight = 297;
+
+            splitText.forEach((line: string) => {
+                if (cursorY > pageHeight - 20) {
+                    doc.addPage();
+                    cursorY = 25;
+                }
+                doc.text(line, margin, cursorY);
+                cursorY += 6;
+            });
+
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for(let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8).setFont('helvetica', 'italic').text(`Generated via Maasim CLS - Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+            }
+
+            if (action === 'print') doc.autoPrint();
+            window.open(doc.output('bloburl'), '_blank');
+
+        } catch (e) {
+            console.error(e);
+            alert("Error generating PDF.");
+        }
+    };
 
     const inputClasses = "block w-full px-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm disabled:bg-slate-100 disabled:text-slate-400";
     const labelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -348,31 +543,8 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                         <label htmlFor="subject" className={labelClasses}>Subject / Matter</label>
                         <input type="text" id="subject" name="subject" value={formData.subject} onChange={handleChange} className={inputClasses} required />
                     </div>
-                    <div className="md:col-span-2">
-                        <label htmlFor="status" className={labelClasses}>Current Status</label>
-                        <select id="status" name="status" value={formData.status} onChange={handleChange} className={inputClasses}>
-                            {(documentStatuses || []).map(status => <option key={status.id} value={status.name}>{status.name}</option>)}
-                        </select>
-                    </div>
-                    
-                    {/* CALENDAR OF BUSINESS */}
-                    <div className="md:col-span-2 border rounded-md p-4 bg-slate-50 border-slate-200">
-                        <p className="font-semibold text-slate-700 mb-3 text-sm uppercase tracking-wide">CALENDAR OF BUSINESS</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="date" name="urgentMattersDate" value={formData.urgentMattersDate || ''} onChange={handleChange} className={inputClasses} placeholder="Urgent Matters Date" />
-                            <input type="date" name="unfinishedBusinessDate" value={formData.unfinishedBusinessDate || ''} onChange={handleChange} className={inputClasses} placeholder="Unfinished Business Date" />
-                            <div className="md:col-span-2 border-t border-slate-200 my-1"></div>
-                            <input type="date" name="firstReadingDate" value={formData.firstReadingDate || ''} onChange={handleChange} className={inputClasses} placeholder="1st Reading Date" />
-                            <select name="concernedCommittee" value={formData.concernedCommittee || ''} onChange={handleChange} className={inputClasses} disabled={formData.status !== 'Referred to Committee'}>
-                                <option value="">-- Select Committee --</option>
-                                {availableCommittees.map(name => <option key={name} value={name}>{name}</option>)}
-                            </select>
-                            <input type="date" name="secondReadingDate" value={formData.secondReadingDate || ''} onChange={handleChange} className={inputClasses} placeholder="2nd Reading Date" />
-                            <input type="date" name="thirdReadingDate" value={formData.thirdReadingDate || ''} onChange={handleChange} className={inputClasses} placeholder="3rd Reading Date" />
-                        </div>
-                    </div>
 
-                    {/* ACTION & REMARKS */}
+                    {/* ACTION & REMARKS (Moved per request) */}
                     <div className="md:col-span-2 border rounded-md p-4 bg-amber-50 border-amber-200">
                         <p className="font-semibold text-amber-800 mb-3 text-sm uppercase tracking-wide">ACTION & REMARKS</p>
                         
@@ -432,6 +604,83 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                             </div>
                         </div>
                     </div>
+                    
+                    {/* LEGISLATIVE ACTIONS (REPLACED OLD 'STATUS' & 'CALENDAR OF BUSINESS') */}
+                    <div className="md:col-span-2 border rounded-md p-4 bg-slate-50 border-slate-200">
+                        <p className="font-semibold text-slate-700 mb-3 text-sm uppercase tracking-wide">LEGISLATIVE ACTIONS</p>
+                        
+                        <div className="space-y-4">
+                            {/* Current Status Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end bg-white p-3 rounded border border-slate-100 shadow-sm">
+                                <div>
+                                    <label htmlFor="status" className={labelClasses}>Update Status</label>
+                                    <select id="status" name="status" value={formData.status} onChange={handleChange} className={inputClasses}>
+                                        {(documentStatuses || []).map(status => <option key={status.id} value={status.name}>{status.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="statusDate" className={labelClasses}>Date of Action / Update</label>
+                                    <input type="date" id="statusDate" name="statusDate" value={formData.statusDate || ''} onChange={handleChange} className={inputClasses} />
+                                </div>
+                            </div>
+
+                            {/* First Reading */}
+                            <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                                <p className="text-xs font-bold text-slate-500 uppercase mb-2">First Reading</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                    <div>
+                                        <label className={labelClasses}>Date</label>
+                                        <input type="date" name="firstReadingDate" value={formData.firstReadingDate || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Remarks</label>
+                                        <input type="text" name="firstReadingRemarks" value={formData.firstReadingRemarks || ''} onChange={handleChange} className={inputClasses} placeholder="Remarks..." />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Committee Referral</label>
+                                        <select name="concernedCommittee" value={formData.concernedCommittee || ''} onChange={handleCommitteeChange} className={inputClasses}>
+                                            <option value="">-- Select Committee --</option>
+                                            {availableCommittees.map(name => <option key={name} value={name}>{name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Chairman</label>
+                                        <input type="text" name="committeeReferralChairman" value={formData.committeeReferralChairman || ''} onChange={handleChange} className={inputClasses} placeholder="Chairman Name" readOnly title="Auto-filled based on selected committee" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Second Reading */}
+                            <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Second Reading</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className={labelClasses}>Date</label>
+                                        <input type="date" name="secondReadingDate" value={formData.secondReadingDate || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Remarks</label>
+                                        <input type="text" name="secondReadingRemarks" value={formData.secondReadingRemarks || ''} onChange={handleChange} className={inputClasses} placeholder="Remarks..." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Third Reading */}
+                            <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Third / Final Reading</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className={labelClasses}>Date</label>
+                                        <input type="date" name="thirdReadingDate" value={formData.thirdReadingDate || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Remarks</label>
+                                        <input type="text" name="thirdReadingRemarks" value={formData.thirdReadingRemarks || ''} onChange={handleChange} className={inputClasses} placeholder="Remarks..." />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     {/* LEGISLATIVE OUTPUT */}
                     <div className="md:col-span-2 border rounded-md p-4 bg-sky-50 border-sky-200">
@@ -474,16 +723,81 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
             </form>
             
             {deadlineInfo && (
-                <div className={`mt-6 p-4 rounded-lg border-2 flex justify-between items-center ${deadlineInfo.daysRemaining < 0 ? 'bg-gray-100 border-gray-300' : deadlineInfo.daysRemaining <= 10 ? 'bg-amber-50 border-amber-300' : 'bg-green-50 border-green-300'}`}>
-                    <div>
-                        <p className="font-bold text-slate-700">Deadline Tracker ({deadlineInfo.dayLimit} days)</p>
-                        <p className="text-xs text-slate-600">Deadline: {deadlineInfo.deadlineDate.toLocaleDateString()}</p>
+                <>
+                    <div className={`mt-6 p-4 rounded-lg border-2 flex justify-between items-center ${deadlineInfo.daysRemaining < 0 ? 'bg-gray-100 border-gray-300' : deadlineInfo.daysRemaining <= 10 ? 'bg-amber-50 border-amber-300' : 'bg-green-50 border-green-300'}`}>
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p className="font-bold text-slate-800 text-lg">Deadline Tracker</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-xs font-bold text-brand-primary uppercase tracking-wide bg-white/50 px-2 py-1 rounded inline-block">
+                                    Reglementary Period Requirement: {deadlineInfo.dayLimit} Days
+                                </p>
+                                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest ml-1">
+                                    Legal Basis: {deadlineInfo.legalBasis}
+                                </p>
+                                <p className="text-xs text-slate-600">
+                                    Target Action Date: <span className="font-mono font-semibold">{deadlineInfo.deadlineDate.toLocaleDateString()}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <span className={`text-4xl font-black ${deadlineInfo.daysRemaining < 0 ? 'text-red-500' : 'text-slate-800'}`}>
+                                {deadlineInfo.daysRemaining}
+                            </span>
+                            <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Days Remaining</p>
+                        </div>
                     </div>
-                    <div className="text-right">
-                        <span className={`text-3xl font-extrabold ${deadlineInfo.daysRemaining < 0 ? 'text-red-500' : 'text-slate-700'}`}>{deadlineInfo.daysRemaining}</span>
-                        <p className="text-[10px] uppercase font-bold text-slate-500">Days Left</p>
+
+                    <div className="mt-4 p-6 bg-indigo-50 rounded-lg border-2 border-indigo-200">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    Findings Report (AI)
+                                </h3>
+                                <p className="text-xs text-indigo-700 mt-1">Review analysis based on lapse status and legal provisions.</p>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={generateFindings} 
+                                disabled={isGeneratingFindings}
+                                className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold uppercase rounded-lg shadow-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                            >
+                                {isGeneratingFindings ? 'Analyzing...' : 'Generate Findings Report'}
+                            </button>
+                        </div>
+
+                        {findingsContent && (
+                            <div className="animate-fade-in-down">
+                                <div className="bg-white p-4 rounded-md border border-indigo-100 shadow-sm max-h-60 overflow-y-auto mb-4">
+                                    <p className="text-sm text-slate-800 whitespace-pre-wrap font-serif leading-relaxed">
+                                        {findingsContent}
+                                    </p>
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handlePrintFindings('preview')}
+                                        className="px-3 py-1.5 bg-white text-indigo-600 border border-indigo-200 text-xs font-bold uppercase rounded hover:bg-indigo-50 transition-colors"
+                                    >
+                                        Preview PDF
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handlePrintFindings('print')}
+                                        className="px-3 py-1.5 bg-indigo-800 text-white text-xs font-bold uppercase rounded shadow hover:bg-indigo-900 transition-colors"
+                                    >
+                                        Print Findings
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </div>
+                </>
             )}
         </div>
     );

@@ -141,7 +141,7 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
                         <h2 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">Database</h2>
                         <div className="flex items-center gap-3 mt-2">
                             <p className="text-slate-500 text-sm font-medium">Search and manage approved legislative records.</p>
-                            <span className="bg-slate-100 text-slate-400 text-[10px] px-2 py-0.5 rounded font-mono">v1.4.6</span>
+                            <span className="bg-slate-100 text-slate-400 text-[10px] px-2 py-0.5 rounded font-mono">v1.4.7</span>
                         </div>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
