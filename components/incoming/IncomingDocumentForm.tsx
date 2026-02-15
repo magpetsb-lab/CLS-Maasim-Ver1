@@ -87,6 +87,10 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
     const [findingsContent, setFindingsContent] = useState('');
     const [isGeneratingFindings, setIsGeneratingFindings] = useState(false);
 
+    // Draft Resolution State
+    const [draftResolutionContent, setDraftResolutionContent] = useState('');
+    const [isGeneratingResolution, setIsGeneratingResolution] = useState(false);
+
     useEffect(() => {
         if (initialData) {
             setFormData({ ...getInitialFormData(), ...initialData });
@@ -95,6 +99,7 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
         }
         setAttachment(null);
         setFindingsContent('');
+        setDraftResolutionContent('');
     }, [initialData]);
 
     const uniqueSenders = useMemo(() => {
@@ -175,10 +180,30 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
         let chairmanName = '';
 
         if (committeeName) {
-            // Find the membership for this committee (closest match to current term/date)
-            // Simplified logic: Find the first matching committee name from memberships
-            // In a real app, you'd match the termYear carefully
-            const membership = committeeMemberships.find(cm => cm.committeeName === committeeName);
+            // Prefer memberships matching the received date if available
+            let relevantMemberships = committeeMemberships.filter(cm => cm.committeeName === committeeName);
+            
+            if (formData.dateReceived) {
+                 const receivedDate = new Date(formData.dateReceived);
+                 receivedDate.setHours(0, 0, 0, 0);
+                 
+                 const termMatch = relevantMemberships.find(cm => {
+                    const years = cm.termYear ? cm.termYear.match(/(\d{4})/g) : null;
+                    if (years && years.length >= 2) {
+                        const startYear = parseInt(years[0]);
+                        const endYear = parseInt(years[years.length - 1]);
+                        const receivedYear = receivedDate.getFullYear();
+                        return receivedYear >= startYear && receivedYear <= endYear;
+                    }
+                    return false;
+                 });
+                 
+                 if (termMatch) relevantMemberships = [termMatch];
+            }
+
+            // Use the most relevant membership found (or first one)
+            const membership = relevantMemberships[0];
+
             if (membership && membership.chairman) {
                 const chairman = legislators.find(l => l.id === membership.chairman);
                 if (chairman) chairmanName = chairman.name;
@@ -188,7 +213,8 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
         setFormData(prev => ({ 
             ...prev, 
             concernedCommittee: committeeName,
-            committeeReferralChairman: chairmanName
+            committeeReferralChairman: chairmanName,
+            sponsor: chairmanName // Auto-populate sponsor in legislative output
         }));
     };
 
@@ -206,17 +232,23 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
     const handleOutputCheck = (type: 'Resolution' | 'Ordinance') => {
         setFormData(prev => {
             if (prev.outputType === type) return { ...prev, outputType: undefined, outputNumber: '' };
+            
             const prefix = type === 'Resolution' ? 'RES' : 'ORD';
+            const year = new Date().getFullYear();
+            const formatPrefix = `${prefix}-${year}-`;
+            
             let maxSeq = 0;
             (existingDocuments || []).forEach(doc => {
-                if (doc.outputNumber && doc.outputNumber.startsWith(`${prefix}-`)) {
+                if (doc.outputNumber && doc.outputNumber.startsWith(formatPrefix)) {
                     const parts = doc.outputNumber.split('-');
-                    const seq = parts.length >= 2 ? parseInt(parts[1], 10) : 0;
+                    // Expected format: PRE-YYYY-SEQ. SEQ is at index 2.
+                    const seq = parts.length >= 3 ? parseInt(parts[2], 10) : 0;
                     if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
                 }
             });
+            
             const nextSeq = String(maxSeq + 1).padStart(3, '0');
-            return { ...prev, outputType: type, outputNumber: `${prefix}-${nextSeq}` };
+            return { ...prev, outputType: type, outputNumber: `${formatPrefix}${nextSeq}` };
         });
     };
 
@@ -377,6 +409,15 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
              }
         }
 
+        // Construct Legislative Action Summary
+        const legislativeActions = [];
+        if (formData.firstReadingDate) legislativeActions.push(`First Reading on ${formData.firstReadingDate} (Ref to: ${formData.concernedCommittee || 'Unspecified'}) - Remarks: ${formData.firstReadingRemarks || 'None'}`);
+        if (formData.secondReadingDate) legislativeActions.push(`Second Reading on ${formData.secondReadingDate} - Remarks: ${formData.secondReadingRemarks || 'None'}`);
+        if (formData.thirdReadingDate) legislativeActions.push(`Third Reading on ${formData.thirdReadingDate} - Remarks: ${formData.thirdReadingRemarks || 'None'}`);
+        
+        const hasLegislativeActions = legislativeActions.length > 0;
+        const actionsText = hasLegislativeActions ? legislativeActions.join('\n') : "No legislative actions recorded yet.";
+
         const prompt = `
         You are a legislative legal officer of the Sangguniang Bayan of Maasim. Draft a formal "Report of Findings and Recommendations" for the review of a local ordinance.
         
@@ -391,18 +432,37 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
         - Legal Basis: ${deadlineInfo.legalBasis}
         - Target Action Date (Deadline): ${deadlineInfo.deadlineDate.toLocaleDateString()}
         
+        Legislative Output Record:
+        - Output Type: ${formData.outputType || 'None'}
+        - Output Number: ${formData.outputNumber || 'None'}
+
+        Legislative Action History (from Form):
+        ${actionsText}
+        
+        General Remarks: ${formData.remarks || 'None'}
+
         Current Status:
         - Days Remaining: ${deadlineInfo.daysRemaining}
         - Condition: ${deadlineInfo.daysRemaining < 0 ? 'Review Period Lapsed' : 'Within Review Period'}
         
         Instructions:
-        1. IF the review period has lapsed (Days Remaining < 0), explicitly state in the Findings that the ordinance is DEEMED APPROVED by operation of law due to inaction, citing the Legal Basis (${deadlineInfo.legalBasis}). The recommendation should reflect this (e.g., issue a certification of approval by operation of law).
+        1. **PRIORITY CHECK (Legislative Output):**
+           - IF "Legislative Output Record" indicates a Resolution or Ordinance was issued (Output Type and Number are not "None"), you MUST conclude that the Sangguniang Bayan **HAS TAKEN FINAL ACTION** on the matter.
+           - Cite the specific output (${formData.outputType} No. ${formData.outputNumber}) as the proof of review and approval/action.
+           - Explicitly stated that because this output exists, the measure is **NOT** deemed approved by inaction, but rather approved/enacted via the legislative process.
+
+        2. **IF NO Legislative Output exists:**
+           - Check 'Legislative Action History'.
+           - IF any legislative actions (e.g., First Reading, Second Reading) are recorded, state that the subject ordinance/resolution WAS TAKEN UP and acted upon by the body. Use the specific dates and remarks provided.
+           - IF 'Legislative Action History' is empty AND the review period has lapsed (Days Remaining < 0), THEN state that the ordinance is DEEMED APPROVED by operation of law due to inaction/no action taken within the reglementary period.
+           - IF 'Legislative Action History' is empty AND it is within the period, state the urgency of the review.
+        
         ${specificLegalInstruction}
-        2. IF it is within the period, state the urgency of the review and the deadline.
+        
         3. Use a formal, legalistic tone suitable for the Sangguniang Bayan records.
         4. Structure the report as follows:
            I. PRELIMINARY INFORMATION (Summary of document)
-           II. FINDINGS OF FACT (Dates, computation of period, lapsed or not${isBudget && specificLegalInstruction.includes('BEYOND') ? ', including late submission analysis' : ''})
+           II. FINDINGS OF FACT (Dates, computation of period, **Action Taken (Output)** or lapse status${isBudget && specificLegalInstruction.includes('BEYOND') ? ', including late submission analysis' : ''})
            III. LEGAL ANALYSIS (Application of ${deadlineInfo.legalBasis} ${isBudget ? 'and Section 329 of RA 7160' : ''})
            IV. RECOMMENDATIONS
         5. Do NOT use markdown formatting (like ** or ##). Use plain text with clear spacing and UPPERCASE for main headers.
@@ -415,6 +475,80 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
             alert('Failed to generate findings. Please check your connection.');
         } finally {
             setIsGeneratingFindings(false);
+        }
+    };
+
+    const generateDraftResolution = async () => {
+        setIsGeneratingResolution(true);
+        
+        const outputType = formData.outputType || 'Resolution';
+        const outputNumber = formData.outputNumber || '_____';
+        const sponsor = formData.sponsor || '[Sponsor Name]';
+        const seconder = formData.seconder || '[Seconder Name]';
+        
+        let specificFormatInstructions = '';
+
+        if (outputType === 'Resolution') {
+            specificFormatInstructions = `
+            **Format for Resolution:**
+            1.  **Header:** Centered. Republic of the Philippines, Province of Sarangani, Municipality of Maasim, Office of the Sangguniang Bayan.
+            2.  **Meta Information:**
+                *   "Resolution No.: ${outputNumber}"
+                *   "Sponsored by: ${sponsor}"
+            3.  **Title:** "${formData.subject}" (Uppercase, Centered)
+            4.  **Body (Preamble):** Use "WHEREAS" clauses.
+                *   Summarize the incoming document details (Sender: ${formData.sender}, Date: ${formData.dateReceived}).
+                *   Summarize the findings: ${findingsContent ? 'Referencing the findings report...' : 'Based on committee review.'}.
+                *   State the legal basis.
+            5.  **Enacting Clause:** EXACTLY: "NOW THEREFORE, the body on joint sponsorship;"
+            6.  **Resolutory Clause:** EXACTLY: "RESOLVED, as it hereby resolves to adopt: ${formData.subject}"
+            7.  **Closing:** "RESOLVED FINALLY, that copies of this resolution be furnished to..."
+            8.  **Signatories:**
+                *   Prepared by: ${formData.secretarySignature || '[Secretary Name]'}, Secretary to the Sanggunian.
+                *   Attested by: ${formData.viceMayorSignature || '[Vice Mayor Name]'}, Municipal Vice Mayor / Presiding Officer.
+            `;
+        } else {
+            // Ordinance
+            specificFormatInstructions = `
+            **Format for Ordinance:**
+            1.  **Header:** Centered. Republic of the Philippines, Province of Sarangani, Municipality of Maasim, Office of the Sangguniang Bayan.
+            2.  **Title:** Centered, Uppercase. "MUNICIPAL ORDINANCE NO. ${outputNumber}" followed by the title "${formData.subject}".
+            3.  **Author/Sponsor:** "Authored by: Hon. ${sponsor}".
+            4.  **Enacting Clause:** "Be it ordained by the Sangguniang Bayan of Maasim, Sarangani Province, in session assembled, that:"
+            5.  **Body (Sections):** Organize content into formal Sections.
+                *   **SECTION 1. Title.** (Short title of the ordinance).
+                *   **SECTION 2. Scope/Purpose.** (Based on: ${formData.remarks || 'the subject matter'}).
+                *   **SECTION 3. Findings/Basis.** (Incorporate findings: ${findingsContent ? 'Referencing the findings report...' : 'Committee recommendations'}).
+                *   **SECTION 4. Provisions.** (Draft standard provisions relevant to the subject "${formData.subject}").
+                *   **SECTION 5. Separability Clause.**
+                *   **SECTION 6. Repealing Clause.**
+                *   **SECTION 7. Effectivity Clause.**
+            6.  **Signatories:**
+                *   Certified Correct: ${formData.secretarySignature || '[Secretary Name]'}, Secretary to the Sanggunian.
+                *   Attested: ${formData.viceMayorSignature || '[Vice Mayor Name]'}, Municipal Vice Mayor / Presiding Officer.
+                *   Approved: [Mayor Name], Municipal Mayor.
+            `;
+        }
+
+        const prompt = `
+        You are the Secretary to the Sangguniang Bayan of Maasim. Draft a formal legislative document based on the requirements below.
+        
+        **Document Type:** ${outputType}
+        **Subject:** ${formData.subject}
+        **Drafting Instructions:**
+        Generate the full text of the ${outputType} strictly adhering to the format structure below. 
+        Do NOT include markdown formatting (like **bold** or *italic*) inside the main text block, use plain text layout (spacing and uppercase) suitable for a legal document.
+
+        ${specificFormatInstructions}
+        `;
+
+        try {
+            const response = await getAIAssistantResponse(prompt);
+            setDraftResolutionContent(response);
+        } catch (e) {
+            alert('Failed to generate draft. Please check your connection.');
+        } finally {
+            setIsGeneratingResolution(false);
         }
     };
 
@@ -436,8 +570,68 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
         return null;
     };
 
-    const handlePrintFindings = async (action: 'preview' | 'print') => {
-        if (!findingsContent) return;
+    const handleDownloadWord = async () => {
+        if (!draftResolutionContent) return;
+        
+        try {
+            const logoData = await getBase64Logo();
+            const title = `DRAFT ${formData.outputType || 'RESOLUTION'}`.toUpperCase();
+            // Simple newline to break conversion for word
+            const formattedContent = draftResolutionContent.replace(/\n/g, '<br />');
+
+            const htmlContent = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>${title}</title></head>
+                <body style="font-family: 'Times New Roman', serif; font-size: 12pt;">
+                    <div style="text-align:center; margin-bottom: 20px;">
+                        <table style="margin: 0 auto; border:none; width: 100%;">
+                            <tr style="border:none;">
+                                <td style="width: 20%; text-align: right; border:none; vertical-align: top;">
+                                    ${logoData ? `<img src="${logoData}" width="80" height="80" />` : ''}
+                                </td>
+                                <td style="width: 60%; text-align: center; border:none; vertical-align: middle;">
+                                    <p style="font-size: 11pt; font-weight: bold; margin: 0; font-family: Arial, sans-serif;">Republic of the Philippines</p>
+                                    <p style="font-size: 11pt; margin: 0; font-family: Arial, sans-serif;">Province of Sarangani</p>
+                                    <p style="font-size: 12pt; font-weight: bold; margin: 0; font-family: Arial, sans-serif;">MUNICIPALITY OF MAASIM</p>
+                                    <br/>
+                                    <p style="font-size: 14pt; font-weight: bold; margin: 0; font-family: 'Times New Roman', serif;">OFFICE OF THE SANGGUNIANG BAYAN</p>
+                                </td>
+                                <td style="width: 20%; border:none;"></td>
+                            </tr>
+                        </table>
+                        <hr style="border: 1px solid black;" />
+                        <br />
+                        <p style="font-size: 14pt; font-weight: bold; text-decoration: underline;">${title}</p>
+                    </div>
+                    <div style="text-align: justify; line-height: 1.5;">
+                        ${formattedContent}
+                    </div>
+                    <br /><br />
+                    <div style="margin-top: 50px; font-size: 9pt; text-align: center; color: #555;">
+                        <p>Generated by Computerized Legislative System - AI Assistant</p>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const filename = `${(formData.outputType || 'Document').replace(/\s+/g, '_')}_Draft_${Date.now()}.doc`;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error(e);
+            alert("Error generating Word document.");
+        }
+    };
+
+    const handlePrintContent = async (title: string, content: string, action: 'preview' | 'print') => {
+        if (!content) return;
         if (!(window as any).jspdf) return alert("PDF library not loaded.");
         
         try {
@@ -459,11 +653,11 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
             doc.setLineWidth(0.5).line(margin, 32, pageWidth - margin, 32);
 
             // Title
-            doc.setFontSize(14).setFont('helvetica', 'bold').text("COMMITTEE FINDINGS REPORT", pageWidth/2, 45, { align: 'center' });
+            doc.setFontSize(14).setFont('helvetica', 'bold').text(title, pageWidth/2, 45, { align: 'center' });
             
             // Content
             doc.setFontSize(11).setFont('times', 'normal');
-            const splitText = doc.splitTextToSize(findingsContent, contentWidth);
+            const splitText = doc.splitTextToSize(content, contentWidth);
             
             let cursorY = 55;
             const pageHeight = 297;
@@ -491,6 +685,15 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
             console.error(e);
             alert("Error generating PDF.");
         }
+    };
+
+    const handlePrintFindings = (action: 'preview' | 'print') => {
+        handlePrintContent("COMMITTEE FINDINGS REPORT", findingsContent, action);
+    };
+
+    const handlePrintDraft = (action: 'preview' | 'print') => {
+        const title = `DRAFT ${formData.outputType || 'RESOLUTION'}`.toUpperCase();
+        handlePrintContent(title, draftResolutionContent, action);
     };
 
     const inputClasses = "block w-full px-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm disabled:bg-slate-100 disabled:text-slate-400";
@@ -792,6 +995,60 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                                         className="px-3 py-1.5 bg-indigo-800 text-white text-xs font-bold uppercase rounded shadow hover:bg-indigo-900 transition-colors"
                                     >
                                         Print Findings
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-4 p-6 bg-teal-50 rounded-lg border-2 border-teal-200">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-teal-900 flex items-center gap-2">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    Draft {formData.outputType || 'Resolution'} (AI)
+                                </h3>
+                                <p className="text-xs text-teal-700 mt-1">Generate a draft legislative measure based on findings and output data.</p>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={generateDraftResolution} 
+                                disabled={isGeneratingResolution}
+                                className="px-4 py-2 bg-teal-600 text-white text-xs font-bold uppercase rounded-lg shadow-md hover:bg-teal-700 disabled:opacity-50 transition-colors"
+                            >
+                                {isGeneratingResolution ? 'Drafting...' : 'Generate Draft'}
+                            </button>
+                        </div>
+
+                        {draftResolutionContent && (
+                            <div className="animate-fade-in-down">
+                                <div className="bg-white p-4 rounded-md border border-teal-100 shadow-sm max-h-96 overflow-y-auto mb-4">
+                                    <p className="text-sm text-slate-800 whitespace-pre-wrap font-serif leading-relaxed">
+                                        {draftResolutionContent}
+                                    </p>
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <button 
+                                        type="button" 
+                                        onClick={handleDownloadWord}
+                                        className="px-3 py-1.5 bg-white text-teal-700 border border-teal-200 text-xs font-bold uppercase rounded hover:bg-teal-50 transition-colors flex items-center gap-1"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                        Download Word
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handlePrintDraft('preview')}
+                                        className="px-3 py-1.5 bg-white text-teal-600 border border-teal-200 text-xs font-bold uppercase rounded hover:bg-teal-50 transition-colors"
+                                    >
+                                        Preview PDF
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handlePrintDraft('print')}
+                                        className="px-3 py-1.5 bg-teal-800 text-white text-xs font-bold uppercase rounded shadow hover:bg-teal-900 transition-colors"
+                                    >
+                                        Print Draft
                                     </button>
                                 </div>
                             </div>
