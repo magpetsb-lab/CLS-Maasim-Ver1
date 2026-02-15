@@ -48,7 +48,8 @@ export class LegislativeDB {
             this.status.connection = 'connected';
         } else {
             // Default to relative path (empty string) for both Dev (Proxy) and Prod (Vercel)
-            // This ensures auto-connection without relying on build-time env variables that might fail.
+            // This ensures auto-connection without relying on build-time env variables that might fail at runtime.
+            // fetch('/api/...') works relatively to the current domain.
             console.log('[DB] Defaulting to relative API paths.');
             this.serverUrl = ''; 
             this.status.connection = 'connected';

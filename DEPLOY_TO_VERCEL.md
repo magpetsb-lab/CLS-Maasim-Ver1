@@ -5,7 +5,7 @@ This application is configured to run seamlessly on Vercel as a "Monorepo" (Fron
 
 ### Prerequisites
 1.  **Supabase Account**: You must have your Supabase Connection String ready.
-    *   *Format*: `postgres://postgres.user:[password]@aws-0-region.pooler.supabase.com:5432/postgres` (Use the Transaction/Session Pooler string if possible, often port 6543 or 5432).
+    *   *Format*: `postgres://postgres.user:[password]@aws-0-region.pooler.supabase.com:5432/postgres` (Use the **Transaction** or **Session** Mode connection string; typically port 5432 or 6543).
 2.  **Google Gemini API Key**: For the AI features.
 3.  **GitHub/GitLab/Bitbucket Account**: To host your code repository.
 
@@ -31,14 +31,14 @@ In the Vercel Import screen, verify these settings:
 *   **Output Directory**: `dist`
 
 ### Step 4: Environment Variables (CRITICAL)
-Expand the **"Environment Variables"** section and add:
+Expand the **"Environment Variables"** section and add the following keys. **If these are missing, the backend will fail to connect.**
 
-| Variable Name | Value |
-| :--- | :--- |
-| `DATABASE_URL` | Your Supabase connection string (e.g., `postgres://...`) |
-| `API_KEY` | Your Google Gemini API Key |
+| Variable Name | Description | Example Value |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | **Required.** Your Supabase PostgreSQL connection string. | `postgres://postgres.abc:[password]@aws-0-us-east-1.pooler.supabase.com:5432/postgres` |
+| `API_KEY` | **Required.** Your Google Gemini API Key for AI features. | `AIzaSyD...` |
 
-*Note: You do not need to set `PORT` or other server configs. Vercel handles this.*
+*Note: You do not need to set `PORT` or other server configs. Vercel automatically handles the Express server execution via `vercel.json` rewrites.*
 
 ### Step 5: Deploy
 1.  Click **Deploy**.
@@ -49,8 +49,8 @@ Expand the **"Environment Variables"** section and add:
 1.  Open the app in your browser.
 2.  Log in (Default: `angel` / `ii88`).
 3.  Go to **Settings** -> **Database & Security**.
-4.  The "Cloud Gateway" status should say **ONLINE SYNC** / **CONNECTED**.
-    *   *Note: You do NOT need to type a URL in the settings box. It connects automatically.*
+4.  The "Cloud Gateway" status should say **ONLINE SYNC** or **CONNECTED**.
+    *   *Note: You do NOT need to type a URL in the settings box if deployed on Vercel. The app automatically attempts to connect to `/api` on the same domain.*
 
 ---
 
@@ -58,7 +58,7 @@ Expand the **"Environment Variables"** section and add:
 
 **Status says "OFFLINE"**
 1.  Check your Vercel Logs (Dashboard -> Your Project -> Logs).
-2.  Look for "Database Error".
+2.  Look for "Database Error" or "Missing DATABASE_URL".
 3.  Ensure you created the tables in Supabase using the code in `db_schema.sql`.
 4.  Ensure your `DATABASE_URL` in Vercel settings is correct and includes the password.
 
@@ -67,3 +67,4 @@ Expand the **"Environment Variables"** section and add:
 
 **AI Features Not Working**
 *   Check that `API_KEY` is set in Vercel Environment Variables.
+*   Ensure your quota has not been exceeded.

@@ -1,10 +1,10 @@
 // Manual declarations to replace missing vite/client types and define process.env
-declare const process: {
-  env: {
+declare namespace NodeJS {
+  interface ProcessEnv {
     readonly API_KEY: string;
     [key: string]: string | undefined;
   }
-};
+}
 
 declare module '*.svg' {
   import * as React from 'react';
