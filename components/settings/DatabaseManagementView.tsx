@@ -199,7 +199,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
 
                     <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
                         <p className="text-slate-500 font-bold uppercase mb-3 tracking-widest text-[9px]">Handshake Diagnostics</p>
-                        <div className="bg-slate-900 p-6 rounded-3xl text-emerald-400 font-mono text-[10px] shadow-inner border-4 border-slate-800 space-y-1.5 h-32 overflow-y-auto">{diagnosticLog.length === 0 ? <p className="text-slate-700 italic">No activity logs...</p> : diagnosticLog.map((l, i) => (<p key={i} className={l.includes('FAILED') || l.includes('ERROR') ? 'text-rose-400 font-black' : ''}>> {l}</p>))}</div>
+                        <div className="bg-slate-900 p-6 rounded-3xl text-emerald-400 font-mono text-[10px] shadow-inner border-4 border-slate-800 space-y-1.5 h-32 overflow-y-auto">{diagnosticLog.length === 0 ? <p className="text-slate-700 italic">No activity logs...</p> : diagnosticLog.map((l, i) => (<p key={i} className={l.includes('FAILED') || l.includes('ERROR') ? 'text-rose-400 font-black' : ''}>&gt;&gt; {l}</p>))}</div>
                     </div>
 
                     <div className="bg-white border-2 border-rose-200 rounded-[2.5rem] p-8 shadow-sm">

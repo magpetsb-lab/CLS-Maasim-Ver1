@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { SessionMinute, Term } from '../../types';
 import { AnalysisType } from '../../types';
@@ -433,7 +432,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
                                     {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                              </div>
-                             {aiStatus && <div className="ml-auto text-[10px] font-mono text-blue-600 animate-pulse">>> {aiStatus}</div>}
+                             {aiStatus && <div className="ml-auto text-[10px] font-mono text-blue-600 animate-pulse">&gt;&gt; {aiStatus}</div>}
                         </div>
                         <div className="relative">
                             <textarea 
