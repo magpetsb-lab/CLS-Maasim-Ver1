@@ -1,3 +1,4 @@
+
 import { 
     MOCK_RESOLUTIONS, MOCK_ORDINANCES, MOCK_SESSION_MINUTES, 
     MOCK_SESSION_AGENDAS, MOCK_COMMITTEE_REPORTS, MOCK_LEGISLATORS, 
@@ -42,7 +43,16 @@ export class LegislativeDB {
 
     constructor() {
         const storedUrl = localStorage.getItem('remote_server_url');
-        this.serverUrl = storedUrl;
+        if (storedUrl) {
+            this.serverUrl = storedUrl;
+            this.status.connection = 'connected';
+        } else {
+            // Default to relative path (empty string) for both Dev (Proxy) and Prod (Vercel)
+            // This ensures auto-connection without relying on build-time env variables that might fail.
+            console.log('[DB] Defaulting to relative API paths.');
+            this.serverUrl = ''; 
+            this.status.connection = 'connected';
+        }
     }
 
     public subscribe(listener: (status: SyncStatus) => void) {
@@ -114,7 +124,8 @@ export class LegislativeDB {
             this.processSyncQueue();
             return { success: true };
         } catch (e: any) {
-            this.setServerUrl(null); // Explicitly go offline if test fails
+            // Do not reset URL if we are using relative path default, unless explicit failure
+            if (url !== '') this.setServerUrl(null); 
             return { success: false, error: e.message };
         }
     }
@@ -160,12 +171,15 @@ export class LegislativeDB {
 
     private async apiRequest(path: string, method: string = 'GET', body?: any, testUrl?: string) {
         const url = testUrl !== undefined ? testUrl : this.serverUrl;
+        
+        // Allow empty string for relative paths
         if (url === null) {
             this.setStatus({ connection: 'offline' });
             throw new Error('OFFLINE: No server URL configured.');
         }
         
         const isAppSecure = window.location.protocol === 'https:';
+        // Only check mixed content if url is absolute (starts with http)
         const isServerInsecure = url.startsWith('http:');
         
         if (isAppSecure && isServerInsecure && !url.includes('localhost') && !url.includes('127.0.0.1')) {
@@ -177,6 +191,7 @@ export class LegislativeDB {
             const timeout = path.includes('export') ? 300000 : 15000;
             const id = setTimeout(() => controller.abort(), timeout);
             
+            // If url is empty string, fetch('/api/...') works relatively
             const response = await fetch(`${url}${path}`, {
                 method,
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
