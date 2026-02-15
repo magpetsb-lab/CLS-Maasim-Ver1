@@ -34,3 +34,30 @@ If the icon opens but shows a standard browser window (with tabs):
 2.  Go to **Site settings**.
 3.  Find **Insecure content** and set it to **Allow**.
 4.  **REFRESH** the page.
+
+---
+
+### 5. Connecting to Supabase (Cloud Database)
+
+To sync your data to the cloud so it can be accessed from anywhere:
+
+1.  **Get Connection String:**
+    *   Go to Supabase Dashboard -> Project Settings -> Database.
+    *   Under "Connection string", select "Node.js".
+    *   Copy the string (it looks like `postgres://postgres.xxxx:[password]@aws-0-region.pooler.supabase.com:5432/postgres`).
+    *   *Note: Replace `[password]` with your actual database password.*
+
+2.  **Create Tables:**
+    *   Copy the content of the file `db_schema.sql` from this project.
+    *   Paste it into the **SQL Editor** in your Supabase Dashboard and click **Run**.
+
+3.  **Configure Server:**
+    *   **If using Vercel:** Go to Settings -> Environment Variables. Add a new variable named `DATABASE_URL` and paste your connection string. Redeploy.
+    *   **If running locally:**
+        *   Stop the server.
+        *   Set the variable and run:
+            *   **CMD:** `set DATABASE_URL=your_connection_string&& node server.js`
+            *   **PowerShell:** `$env:DATABASE_URL="your_connection_string"; node server.js`
+
+4.  **Verify:**
+    *   Restart the app. The "Cloud Gateway" status in Settings should show "ONLINE SYNC".
