@@ -18,8 +18,9 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
     const [serverUrl, setServerUrl] = useState(dbService.getServerUrl() || '');
     const [connectionStatus, setConnectionStatus] = useState<'IDLE' | 'TESTING' | 'CONNECTED' | 'FAILED'>('IDLE');
     const [diagnosticLog, setDiagnosticLog] = useState<string[]>([]);
-    const [activeTab, setActiveTab] = useState<'config' | 'guide' | 'permissions'>('config');
+    const [activeTab, setActiveTab] = useState<'config' | 'guide' | 'troubleshoot' | 'permissions'>('config');
     const [errorDetails, setErrorDetails] = useState<string | null>(null);
+    const [errorHint, setErrorHint] = useState<string | null>(null);
     const [permissions, setPermissions] = useState<PermissionStatus>({
         camera: 'unknown', microphone: 'unknown', geolocation: 'unknown', notifications: 'unknown'
     });
@@ -79,6 +80,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
         setServerUrl(urlToTest);
         setConnectionStatus('TESTING');
         setErrorDetails(null);
+        setErrorHint(null);
         if (!isInitialCheck) addLog(`Initiating handshake with: ${urlToTest || 'internal API'}`);
         
         const result = await dbService.testAndSetConnection(urlToTest);
@@ -90,6 +92,11 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
         } else {
             setConnectionStatus('FAILED');
             setErrorDetails(result.error || "An unknown network error occurred.");
+            if (result.error && (result.error.includes('starting up') || result.error.includes('transitioning'))) {
+                setErrorHint("The database is waking up. This is normal for Railway. Please wait 1 minute and try again.");
+            } else if (result.error && (result.error.includes('ENETUNREACH') || result.error.includes('ECONNREFUSED'))) {
+                setErrorHint("Network error. If using Railway, ensure 'Public Networking' is enabled in the database settings if you are connecting locally.");
+            }
             if (!isInitialCheck) addLog(`ERROR: Connection could not be established.`);
         }
     };
@@ -147,8 +154,8 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
 
     return (
         <div className="max-w-5xl mx-auto space-y-6 pb-20">
-            <div className="flex bg-slate-200 p-1 rounded-2xl w-fit">
-                {['config', 'guide', 'permissions'].map((t) => (
+            <div className="flex bg-slate-200 p-1 rounded-2xl w-fit flex-wrap">
+                {['config', 'guide', 'troubleshoot', 'permissions'].map((t) => (
                     <button 
                         key={t}
                         onClick={() => setActiveTab(t as any)}
@@ -168,7 +175,8 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                                 <div>
                                     <h4 className="font-black text-sm uppercase tracking-tight">Connectivity Alert</h4>
                                     <p className="text-xs mt-1 leading-relaxed">{errorDetails}</p>
-                                    <button onClick={() => setActiveTab('guide')} className="mt-3 text-[10px] font-black uppercase text-rose-600 underline">How do I fix this?</button>
+                                    {errorHint && <p className="text-xs mt-2 font-bold bg-white/50 p-2 rounded">{errorHint}</p>}
+                                    <button onClick={() => setActiveTab('troubleshoot')} className="mt-3 text-[10px] font-black uppercase text-rose-600 underline">Get Help</button>
                                 </div>
                             </div>
                         </div>
@@ -258,6 +266,36 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                     </div>
                 </div>
             )}
+            
+            {activeTab === 'troubleshoot' && (
+                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl space-y-8 animate-fade-in-down">
+                    <div className="text-center">
+                        <h2 className="text-3xl font-black text-slate-900 uppercase italic">Troubleshooting</h2>
+                        <p className="text-slate-500 mt-2">Solutions for common Railway connection issues.</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                            <h4 className="font-bold text-slate-800 uppercase mb-2">Error: "Unable to connect via SSH"</h4>
+                            <p className="text-xs text-slate-600 mb-4">You see this in the Railway Dashboard when clicking "Data".</p>
+                            <ul className="text-xs text-slate-700 list-disc pl-4 space-y-1">
+                                <li><b>Cause:</b> The database container is still starting up or initializing.</li>
+                                <li><b>Fix:</b> Wait 1-2 minutes and refresh the page. This is a Railway UI issue, not necessarily an app issue.</li>
+                            </ul>
+                        </div>
+                        
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                            <h4 className="font-bold text-slate-800 uppercase mb-2">Error: "ENETUNREACH" or "ECONNREFUSED"</h4>
+                            <p className="text-xs text-slate-600 mb-4">The app cannot reach the database.</p>
+                            <ul className="text-xs text-slate-700 list-disc pl-4 space-y-1">
+                                <li><b>Local App:</b> If running locally, you MUST use the <b>Public Connection String</b> (e.g. <code>roundhouse.proxy.rlwy.net</code>). Enable "Public Networking" in Railway DB settings.</li>
+                                <li><b>Deployed App:</b> Use the <b>Private Connection String</b> (e.g. <code>.railway.internal</code>).</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {activeTab === 'permissions' && (
                 <div className="bg-white p-8 rounded-[3rem] border border-slate-200 text-center py-20">
                      <h3 className="text-2xl font-black text-slate-900 uppercase italic">Device Permissions</h3>

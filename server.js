@@ -36,8 +36,6 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // 4. CLOUD DATABASE CONNECTION
-// SECURITY UPDATE: Removed hardcoded connection string. 
-// You MUST set DATABASE_URL in your Vercel/Railway Environment Variables.
 let connectionString = process.env.DATABASE_URL;
 let poolConfig = {};
 
@@ -55,7 +53,6 @@ const prepareDatabaseConfig = async () => {
         const dbUrl = new URL(connectionString);
         const originalHostname = dbUrl.hostname;
         
-        // Detect Provider for logging
         let provider = 'Generic Postgres';
         if (originalHostname.includes('supabase')) provider = 'Supabase';
         else if (originalHostname.includes('railway')) provider = 'Railway (Internal/Public)';
@@ -65,32 +62,31 @@ const prepareDatabaseConfig = async () => {
 
         console.log(`[SYSTEM] Detected Database Provider: ${provider}`);
 
-        // IPv6/IPv4 Fix: Explicitly resolve to IPv4 if it's not a local or internal address
+        // IPv6/IPv4 Fix: Use dns.lookup with family: 4 to respect OS hosts and force IPv4
         const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(originalHostname);
         const isInternal = originalHostname.endsWith('.internal') || originalHostname === 'localhost';
 
         if (!isIp && !isInternal) {
             console.log(`[SYSTEM] Resolving DB Host: ${originalHostname} to IPv4...`);
             try {
-                const addresses = await dns.promises.resolve4(originalHostname);
-                if (addresses && addresses.length > 0) {
-                    console.log(`[SYSTEM] DNS Success: Mapped ${originalHostname} -> ${addresses[0]}`);
-                    dbUrl.hostname = addresses[0];
+                // dns.lookup is better than resolve4 as it uses getaddrinfo (respects /etc/hosts)
+                const { address } = await dns.promises.lookup(originalHostname, { family: 4 });
+                if (address) {
+                    console.log(`[SYSTEM] DNS Success: Mapped ${originalHostname} -> ${address}`);
+                    dbUrl.hostname = address;
                     connectionString = dbUrl.toString();
                     
-                    // Essential for SSL to work when connecting via IP
+                    // Essential for SSL to work when connecting via IP (SNI)
                     poolConfig.ssl = {
                         rejectUnauthorized: false,
                         servername: originalHostname
                     };
                 }
             } catch (dnsErr) {
-                console.warn('[SYSTEM] DNS Resolution failed, falling back to system default:', dnsErr.message);
+                console.warn('[SYSTEM] DNS Resolution failed, using original hostname:', dnsErr.message);
                 poolConfig.ssl = { rejectUnauthorized: false };
             }
         } else {
-             // For internal addresses (Railway private networking) or direct IPs
-             // Production usually requires SSL with rejectUnauthorized: false for self-signed certs in managed DBs
              poolConfig.ssl = (process.env.NODE_ENV === 'production' || connectionString.includes('sslmode=require')) 
                 ? { rejectUnauthorized: false } 
                 : false;
@@ -137,11 +133,17 @@ app.get('/api/health', async (req, res) => {
         });
     } catch (err) {
         console.error('[HEALTH] DB check failed:', err.message);
-        const isNetworkError = err.message.includes('ENETUNREACH') || err.message.includes('EAI_AGAIN');
+        const isNetworkError = err.message.includes('ENETUNREACH') || err.message.includes('EAI_AGAIN') || err.message.includes('ECONNREFUSED');
+        const isStartingUp = err.message.includes('starting up') || err.code === '57P03';
+        
         res.status(503).json({ 
             status: 'error', 
             reason: `DB Connection Failed: ${err.message}`, 
-            hint: isNetworkError ? 'Network unreachable. Check if Database is active and allows public connections.' : 'Check DATABASE_URL credentials in Railway Variables.'
+            hint: isStartingUp 
+                ? 'The database is currently starting up. Please wait a moment.' 
+                : isNetworkError 
+                    ? 'Network unreachable. If using Railway, ensure Public Networking is enabled for local connections, or correct internal URL is used.' 
+                    : 'Check DATABASE_URL credentials in Railway Variables.'
         });
     }
 });
@@ -217,25 +219,34 @@ app.get('*', (req, res) => {
 // 7. EXPORT & SERVER STARTUP
 export default app;
 
-async function initDb() {
+async function initDbWithRetry(retries = 5, delay = 2000) {
     if (!pool) return { ok: false, error: "Pool not ready" };
-    let client;
-    try {
-        client = await pool.connect();
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS legislative_data (
-                id TEXT PRIMARY KEY,
-                store_name TEXT NOT NULL,
-                content JSONB NOT NULL,
-                updated_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE INDEX IF NOT EXISTS idx_store_name ON legislative_data(store_name);
-        `);
-        return { ok: true };
-    } catch (err) {
-        return { ok: false, error: err.message };
-    } finally {
-        if (client) client.release();
+    
+    for (let i = 0; i < retries; i++) {
+        let client;
+        try {
+            client = await pool.connect();
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS legislative_data (
+                    id TEXT PRIMARY KEY,
+                    store_name TEXT NOT NULL,
+                    content JSONB NOT NULL,
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS idx_store_name ON legislative_data(store_name);
+            `);
+            client.release();
+            return { ok: true };
+        } catch (err) {
+            if (client) client.release();
+            console.log(`[DB] Connection attempt ${i + 1}/${retries} failed: ${err.message}`);
+            if (i < retries - 1) {
+                console.log(`[DB] Retrying in ${delay/1000}s...`);
+                await new Promise(res => setTimeout(res, delay));
+            } else {
+                return { ok: false, error: err.message };
+            }
+        }
     }
 }
 
@@ -253,7 +264,7 @@ if (process.argv[1] === __filename) {
             console.log(`\x1b[36m[SYSTEM]\x1b[0m Server listening on port: ${PORT}`);
 
             if (pool) {
-                const dbStatus = await initDb();
+                const dbStatus = await initDbWithRetry();
                 if (dbStatus.ok) {
                     console.log(`\x1b[32m[SUCCESS]\x1b[0m Database Linked: ONLINE`);
                 } else {
