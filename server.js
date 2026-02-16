@@ -4,7 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import os from 'os';
 import dns from 'dns';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, URL } from 'url';
 import { createRequire } from 'module';
 
 // Polyfills for ESM
@@ -38,7 +38,8 @@ app.use(express.static(path.join(__dirname, 'dist')));
 // 4. CLOUD DATABASE CONNECTION
 // SECURITY UPDATE: Removed hardcoded connection string. 
 // You MUST set DATABASE_URL in your Vercel/Railway Environment Variables.
-const connectionString = process.env.DATABASE_URL;
+let connectionString = process.env.DATABASE_URL;
+let poolConfig = {};
 
 if (!connectionString) {
     console.warn('[SYSTEM] No DATABASE_URL provided. API endpoints will fail, but static frontend will serve.');
@@ -46,52 +47,84 @@ if (!connectionString) {
     console.error('[SYSTEM] CRITICAL CONFIG ERROR: DATABASE_URL contains placeholder [YOUR-PASSWORD]. Please replace it with your actual password in Railway Variables.');
 }
 
+// 4.1 DNS Resolution Helper (IPv6 Fix)
+// Many cloud providers (Railway) + Supabase can have issues with auto-negotiating IPv6.
+// We manually resolve the hostname to an IPv4 address to force a stable connection.
+const prepareDatabaseConfig = async () => {
+    if (!connectionString) return;
+
+    try {
+        // Parse the connection string
+        const dbUrl = new URL(connectionString);
+        const originalHostname = dbUrl.hostname;
+
+        // Check if hostname is already an IP
+        const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(originalHostname);
+
+        if (!isIp && originalHostname !== 'localhost') {
+            console.log(`[SYSTEM] Resolving DB Host: ${originalHostname} to IPv4...`);
+            try {
+                const addresses = await dns.promises.resolve4(originalHostname);
+                if (addresses && addresses.length > 0) {
+                    console.log(`[SYSTEM] DNS Success: Mapped ${originalHostname} -> ${addresses[0]}`);
+                    // Replace hostname with IPv4 in connection string
+                    dbUrl.hostname = addresses[0];
+                    connectionString = dbUrl.toString();
+                    
+                    // We must pass the original hostname for SNI (Server Name Indication) if SSL is used
+                    poolConfig.ssl = {
+                        rejectUnauthorized: false,
+                        servername: originalHostname
+                    };
+                }
+            } catch (dnsErr) {
+                console.warn('[SYSTEM] DNS Resolution failed, falling back to system default:', dnsErr.message);
+                // Fallback to default SSL config
+                poolConfig.ssl = { rejectUnauthorized: false };
+            }
+        } else {
+             poolConfig.ssl = (connectionString && (connectionString.includes('supabase') || connectionString.includes('neon.tech') || process.env.NODE_ENV === 'production')) 
+                ? { rejectUnauthorized: false } 
+                : false;
+        }
+    } catch (e) {
+        console.error('[SYSTEM] URL Parsing Error:', e.message);
+        // Fallback default
+        poolConfig.ssl = { rejectUnauthorized: false };
+    }
+};
+
 // pg in ESM often requires destructuring from the default export or named import depending on version
 const { Pool } = pg;
+let pool = null;
 
-const pool = new Pool({
-  connectionString: connectionString,
-  family: 4, 
-  max: 10,   
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-  ssl: (connectionString && (connectionString.includes('supabase') || connectionString.includes('neon.tech') || process.env.NODE_ENV === 'production')) 
-       ? { rejectUnauthorized: false } 
-       : false
-});
-
-pool.on('error', (err) => {
-    console.error('[DB_POOL] Unexpected error on idle client:', err.message);
-});
-
-async function initDb() {
-    if (!connectionString) return { ok: false, error: "Missing DATABASE_URL" };
+// Initialize Pool with dynamic config
+// We wrap this in an async function to allow await on DNS resolution
+const initializePool = async () => {
+    await prepareDatabaseConfig();
     
-    let client;
-    try {
-        client = await pool.connect();
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS legislative_data (
-                id TEXT PRIMARY KEY,
-                store_name TEXT NOT NULL,
-                content JSONB NOT NULL,
-                updated_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE INDEX IF NOT EXISTS idx_store_name ON legislative_data(store_name);
-        `);
-        return { ok: true };
-    } catch (err) {
-        return { ok: false, error: err.message };
-    } finally {
-        if (client) client.release();
-    }
-}
+    pool = new Pool({
+        connectionString: connectionString,
+        family: 4, // Explicitly request IPv4 stack in libpq
+        max: 10,   
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+        ...poolConfig // Spread the SSL config determined above
+    });
+
+    pool.on('error', (err) => {
+        console.error('[DB_POOL] Unexpected error on idle client:', err.message);
+    });
+};
 
 // 5. API ENDPOINTS
+// NOTE: We check if pool is ready before querying
 app.get('/api/health', async (req, res) => {
     try {
-        if (!connectionString) throw new Error("Server missing DATABASE_URL configuration.");
-        if (connectionString.includes('[YOUR-PASSWORD]')) throw new Error("DATABASE_URL has invalid password placeholder.");
+        if (!process.env.DATABASE_URL) throw new Error("Server missing DATABASE_URL configuration.");
+        if (process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) throw new Error("DATABASE_URL has invalid password placeholder.");
+        if (!pool) throw new Error("Database pool initializing...");
+        
         await pool.query('SELECT 1');
         res.json({ 
             status: 'ok', 
@@ -101,16 +134,18 @@ app.get('/api/health', async (req, res) => {
         });
     } catch (err) {
         console.error('[HEALTH] DB check failed:', err.message);
+        const isNetworkError = err.message.includes('ENETUNREACH') || err.message.includes('EAI_AGAIN');
         res.status(503).json({ 
             status: 'error', 
-            reason: `DB Connection Failed: ${err.message}`, // Frontend looks for 'reason'
-            hint: 'Ensure DATABASE_URL is set in Railway Variables and password is correct.'
+            reason: `DB Connection Failed: ${err.message}`, 
+            hint: isNetworkError ? 'Network unreachable. The server is trying to fix IPv6/IPv4 routing.' : 'Check DATABASE_URL credentials in Railway Variables.'
         });
     }
 });
 
 app.get('/api/system/export', async (req, res) => {
     try {
+        if (!pool) throw new Error("Database not connected");
         const result = await pool.query('SELECT store_name, content FROM legislative_data');
         const exportData = {};
         result.rows.forEach(row => {
@@ -132,6 +167,7 @@ app.get('/api/system/export', async (req, res) => {
 
 app.get('/api/:store', async (req, res) => {
     try {
+        if (!pool) throw new Error("Database not connected");
         const result = await pool.query(
             'SELECT content FROM legislative_data WHERE store_name = $1 ORDER BY updated_at DESC', 
             [req.params.store]
@@ -144,6 +180,7 @@ app.get('/api/:store', async (req, res) => {
 
 app.post('/api/:store', async (req, res) => {
     try {
+        if (!pool) throw new Error("Database not connected");
         const { store } = req.params;
         const content = req.body;
         if (!content.id) return res.status(400).json({ error: 'Missing ID for record.' });
@@ -161,6 +198,7 @@ app.post('/api/:store', async (req, res) => {
 
 app.delete('/api/:store/:id', async (req, res) => {
     try {
+        if (!pool) throw new Error("Database not connected");
         await pool.query('DELETE FROM legislative_data WHERE id = $1', [req.params.id]);
         res.status(200).json({ success: true, id: req.params.id });
     } catch (err) {
@@ -177,32 +215,65 @@ app.get('*', (req, res) => {
 // 7. EXPORT & SERVER STARTUP
 export default app;
 
-if (process.argv[1] === __filename) {
-    app.listen(PORT, '0.0.0.0', async () => {
-        console.clear();
-        console.log(`\x1b[34m╔══════════════════════════════════════════════════════════════╗\x1b[0m`);
-        console.log(`\x1b[34m║          LEGISLATIVE DATA BRIDGE SERVER IS RUNNING           ║\x1b[0m`);
-        console.log(`\x1b[34m╚══════════════════════════════════════════════════════════════╝\x1b[0m`);
-        
-        console.log(`\x1b[36m[SYSTEM]\x1b[0m Version: ${packageJson.version}`);
-        console.log(`\x1b[36m[SYSTEM]\x1b[0m Server listening on port: ${PORT}`);
+async function initDb() {
+    if (!pool) return { ok: false, error: "Pool not ready" };
+    let client;
+    try {
+        client = await pool.connect();
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS legislative_data (
+                id TEXT PRIMARY KEY,
+                store_name TEXT NOT NULL,
+                content JSONB NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_store_name ON legislative_data(store_name);
+        `);
+        return { ok: true };
+    } catch (err) {
+        return { ok: false, error: err.message };
+    } finally {
+        if (client) client.release();
+    }
+}
 
-        const dbStatus = await initDb();
-        if (dbStatus.ok) {
-            console.log(`\x1b[32m[SUCCESS]\x1b[0m Database Linked: ONLINE`);
-        } else {
-            console.log(`\x1b[31m[ERROR]\x1b[0m Database Error: ${dbStatus.error}`);
-            console.log(`\x1b[33m[WARNING]\x1b[0m App running in OFFLINE mode (Serverless Static)`);
-        }
+if (process.argv[1] === __filename) {
+    // Start server logic wrapper
+    const startServer = async () => {
+        await initializePool(); // Wait for DNS resolution
         
-        console.log(`\nLocal URL: http://localhost:${PORT}`);
-        const networkInterfaces = os.networkInterfaces();
-        Object.keys(networkInterfaces).forEach((ifName) => {
-            (networkInterfaces[ifName] || []).forEach((iface) => {
-                if (iface.family === 'IPv4' && !iface.internal) {
-                    console.log(`Network URL: http://${iface.address}:${PORT}`);
+        app.listen(PORT, '0.0.0.0', async () => {
+            console.clear();
+            console.log(`\x1b[34m╔══════════════════════════════════════════════════════════════╗\x1b[0m`);
+            console.log(`\x1b[34m║          LEGISLATIVE DATA BRIDGE SERVER IS RUNNING           ║\x1b[0m`);
+            console.log(`\x1b[34m╚══════════════════════════════════════════════════════════════╝\x1b[0m`);
+            
+            console.log(`\x1b[36m[SYSTEM]\x1b[0m Version: ${packageJson.version}`);
+            console.log(`\x1b[36m[SYSTEM]\x1b[0m Server listening on port: ${PORT}`);
+
+            if (pool) {
+                const dbStatus = await initDb();
+                if (dbStatus.ok) {
+                    console.log(`\x1b[32m[SUCCESS]\x1b[0m Database Linked: ONLINE`);
+                } else {
+                    console.log(`\x1b[31m[ERROR]\x1b[0m Database Error: ${dbStatus.error}`);
+                    console.log(`\x1b[33m[WARNING]\x1b[0m App running in OFFLINE mode (Serverless Static)`);
                 }
+            } else {
+                 console.log(`\x1b[33m[WARNING]\x1b[0m Database pool failed to initialize (Missing Config).`);
+            }
+            
+            console.log(`\nLocal URL: http://localhost:${PORT}`);
+            const networkInterfaces = os.networkInterfaces();
+            Object.keys(networkInterfaces).forEach((ifName) => {
+                (networkInterfaces[ifName] || []).forEach((iface) => {
+                    if (iface.family === 'IPv4' && !iface.internal) {
+                        console.log(`Network URL: http://${iface.address}:${PORT}`);
+                    }
+                });
             });
         });
-    });
+    };
+
+    startServer();
 }
