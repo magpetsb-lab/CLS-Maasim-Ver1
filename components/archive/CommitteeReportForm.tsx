@@ -278,7 +278,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
                                                 type="checkbox"
                                                 className="h-5 w-5 rounded border-slate-300 text-brand-secondary focus:ring-brand-secondary"
                                                 checked={formData.attendance.chairman.includes(selectedCommitteeDetails.chairman.name)}
-                                                onChange={(e) => handleAttendanceChange('chairman', selectedCommitteeDetails.chairman.name, e.target.checked)}
+                                                onChange={(e) => handleAttendanceChange('chairman', selectedCommitteeDetails.chairman!.name, e.target.checked)}
                                             />
                                             <span>{selectedCommitteeDetails.chairman.name}</span>
                                         </label>
@@ -294,7 +294,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
                                                 type="checkbox"
                                                 className="h-5 w-5 rounded border-slate-300 text-brand-secondary focus:ring-brand-secondary"
                                                 checked={formData.attendance.viceChairman.includes(selectedCommitteeDetails.viceChairman.name)}
-                                                onChange={(e) => handleAttendanceChange('viceChairman', selectedCommitteeDetails.viceChairman.name, e.target.checked)}
+                                                onChange={(e) => handleAttendanceChange('viceChairman', selectedCommitteeDetails.viceChairman!.name, e.target.checked)}
                                             />
                                             <span>{selectedCommitteeDetails.viceChairman.name}</span>
                                         </label>

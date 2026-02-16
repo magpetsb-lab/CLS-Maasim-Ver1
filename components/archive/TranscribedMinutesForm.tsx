@@ -61,7 +61,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
         if (name === 'sessionType') {
             const year = new Date().getFullYear();
             const newPrefix = value === 'Special' ? 'TSS' : 'TRS';
-            setFormData(prev => {
+            setFormData((prev: any) => {
                 let currentSuffix = '';
                 const parts = prev.sessionNumber.split('-');
                 if (parts.length > 2) {
@@ -75,7 +75,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
                 };
             });
         } else {
-            setFormData(prev => ({ ...prev, [name]: value as any }));
+            setFormData((prev: any) => ({ ...prev, [name]: value as any }));
         }
     };
 
@@ -115,7 +115,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
                     ? await transcribeAudioSummarized(base64, audioFile.type)
                     : await transcribeAudio(base64, audioFile.type);
 
-                setFormData(prev => ({ 
+                setFormData((prev: any) => ({ 
                     ...prev, 
                     minutesContent: (prev.minutesContent ? prev.minutesContent + '\n\n' : '') + transcription 
                 }));
@@ -140,7 +140,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
         
         try {
             const summary = await analyzeText(formData.minutesContent, AnalysisType.Summary);
-            setFormData(prev => ({ 
+            setFormData((prev: any) => ({ 
                 ...prev, 
                 minutesContent: (prev.minutesContent ? prev.minutesContent + '\n\n' : '') + 
                                 '### EXECUTIVE SUMMARY (AI GENERATED)\n\n' + summary 
@@ -238,7 +238,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
         let lineCount = 0;
         const LINES_PER_PAGE = 38;
 
-        lines.forEach(line => {
+        lines.forEach((line: string) => {
             const wrapCount = Math.max(1, Math.ceil(line.length / 90));
             if (lineCount + wrapCount > LINES_PER_PAGE) {
                 pages.push(currentPage);
@@ -258,7 +258,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
             {showLiveModal && (
                 <LiveTranscriptionModal 
                     onClose={() => setShowLiveModal(false)} 
-                    onFinish={(t) => { setFormData(p => ({...p, minutesContent: (p.minutesContent ? p.minutesContent + '\n\n' : '') + t})); setShowLiveModal(false); }}
+                    onFinish={(t) => { setFormData((p: any) => ({...p, minutesContent: (p.minutesContent ? p.minutesContent + '\n\n' : '') + t})); setShowLiveModal(false); }}
                 />
             )}
 
@@ -490,7 +490,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
                         PDF Report
                     </button>
                     <button type="button" onClick={() => handlePdfExport(true)} className="flex-grow px-6 py-2.5 bg-slate-800 text-white font-bold text-xs uppercase rounded-lg shadow hover:bg-slate-900 transition-all flex items-center justify-center gap-2">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 002 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 002 2v4a2 2 0 00-2 2v4h10z" /></svg>
                         Print
                     </button>
                 </div>

@@ -103,7 +103,9 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
     }, [initialData]);
 
     const uniqueSenders = useMemo(() => {
-        const senders = (existingDocuments || []).map(doc => doc.sender).filter(Boolean);
+        const senders = (existingDocuments || [])
+            .map(doc => doc.sender)
+            .filter((s): s is string => !!s);
         return Array.from(new Set(senders)).sort();
     }, [existingDocuments]);
 
@@ -146,7 +148,7 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
     const secretarySuggestions = useMemo(() => {
         const fromHistory = (existingDocuments || []).map(doc => doc.secretarySignature).filter(Boolean);
         const fromLegislators = availableSignatories.map(l => l.name);
-        return Array.from(new Set([...fromHistory, ...fromLegislators])).sort();
+        return Array.from(new Set([...fromHistory, ...fromLegislators])).sort() as string[];
     }, [existingDocuments, availableSignatories]);
 
     const availableCommittees = useMemo(() => {

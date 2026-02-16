@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Legislator, Term, Position } from '../types';
-import { POSITIONS, COUNCILOR_RANKS } from '../../constants';
+import { POSITIONS, COUNCILOR_RANKS } from '../constants';
 
 interface LegislationDetailProps {
     initialData?: Legislator | null;
@@ -161,7 +161,7 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
                                 <label htmlFor="newTitle" className={labelClasses}>Title / Position</label>
                                 <select id="newTitle" name="title" value={newPosition.title} onChange={handleNewPositionChange} className={inputClasses}>
                                     <option value="">-- Select a Title --</option>
-                                    {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                                    {POSITIONS.map((pos: string) => <option key={pos} value={pos}>{pos}</option>)}
                                 </select>
                             </div>
                             <div>
@@ -188,7 +188,7 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
                                     {newPosition.title === 'Councilor' ? (
                                         <>
                                             <option value="" disabled>-- Select Rank --</option>
-                                            {COUNCILOR_RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                                            {COUNCILOR_RANKS.map((r: string) => <option key={r} value={r}>{r}</option>)}
                                         </>
                                     ) : (
                                         <option value="N/A">N/A</option>
