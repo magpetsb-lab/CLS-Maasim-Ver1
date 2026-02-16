@@ -1,12 +1,20 @@
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
-const path = require('path');
-const os = require('os');
+import express from 'express';
+import pg from 'pg';
+import cors from 'cors';
+import path from 'path';
+import os from 'os';
+import dns from 'dns';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+// Polyfills for ESM
+const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const packageJson = require('./package.json');
 
 // Force Node.js to prioritize IPv4 for DNS resolution.
-require('dns').setDefaultResultOrder('ipv4first');
+dns.setDefaultResultOrder('ipv4first');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -35,6 +43,9 @@ const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
     console.warn('[SYSTEM] No DATABASE_URL provided. API endpoints will fail, but static frontend will serve.');
 }
+
+// pg in ESM often requires destructuring from the default export or named import depending on version
+const { Pool } = pg;
 
 const pool = new Pool({
   connectionString: connectionString,
@@ -161,9 +172,9 @@ app.get('*', (req, res) => {
 });
 
 // 7. EXPORT & SERVER STARTUP
-module.exports = app;
+export default app;
 
-if (require.main === module) {
+if (process.argv[1] === __filename) {
     app.listen(PORT, '0.0.0.0', async () => {
         console.clear();
         console.log(`\x1b[34m╔══════════════════════════════════════════════════════════════╗\x1b[0m`);

@@ -2,6 +2,7 @@
   "name": "legislative-system-maasim",
   "version": "1.4.7",
   "description": "Computerized Legislative System for LGU Maasim",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "dev": "vite",
