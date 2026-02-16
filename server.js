@@ -37,11 +37,13 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 // 4. CLOUD DATABASE CONNECTION
 // SECURITY UPDATE: Removed hardcoded connection string. 
-// You MUST set DATABASE_URL in your Vercel Environment Variables.
+// You MUST set DATABASE_URL in your Vercel/Railway Environment Variables.
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
     console.warn('[SYSTEM] No DATABASE_URL provided. API endpoints will fail, but static frontend will serve.');
+} else if (connectionString.includes('[YOUR-PASSWORD]')) {
+    console.error('[SYSTEM] CRITICAL CONFIG ERROR: DATABASE_URL contains placeholder [YOUR-PASSWORD]. Please replace it with your actual password in Railway Variables.');
 }
 
 // pg in ESM often requires destructuring from the default export or named import depending on version
@@ -89,6 +91,7 @@ async function initDb() {
 app.get('/api/health', async (req, res) => {
     try {
         if (!connectionString) throw new Error("Server missing DATABASE_URL configuration.");
+        if (connectionString.includes('[YOUR-PASSWORD]')) throw new Error("DATABASE_URL has invalid password placeholder.");
         await pool.query('SELECT 1');
         res.json({ 
             status: 'ok', 
@@ -100,8 +103,8 @@ app.get('/api/health', async (req, res) => {
         console.error('[HEALTH] DB check failed:', err.message);
         res.status(503).json({ 
             status: 'error', 
-            message: err.message,
-            hint: 'Ensure DATABASE_URL environment variable is set in your hosting dashboard.'
+            reason: `DB Connection Failed: ${err.message}`, // Frontend looks for 'reason'
+            hint: 'Ensure DATABASE_URL is set in Railway Variables and password is correct.'
         });
     }
 });

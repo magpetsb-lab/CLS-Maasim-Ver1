@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { dbService, SyncStatus } from '../../services/db';
 
@@ -67,6 +68,14 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
     const checkConnection = async (customUrl?: string, isInitialCheck = false) => {
         const urlToTest = typeof customUrl === 'string' ? customUrl.trim().replace(/\/$/, '') : serverUrl.trim().replace(/\/$/, '');
         
+        // Input Validation
+        if (urlToTest.startsWith('postgres://') || urlToTest.startsWith('postgresql://') || urlToTest.includes('supabase.co')) {
+            setErrorDetails("DETECTED DATABASE STRING: You pasted a Database Connection String. This field requires the RAILWAY APP URL (e.g., https://myapp.up.railway.app). The database string must be set in your Railway Project Variables.");
+            setConnectionStatus('FAILED');
+            addLog("ERROR: Invalid URL format (DB String detected).");
+            return;
+        }
+
         setServerUrl(urlToTest);
         setConnectionStatus('TESTING');
         setErrorDetails(null);
@@ -186,14 +195,12 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
 
                         <div className="flex flex-col sm:flex-row gap-3">
                             <div className="relative flex-grow">
-                                <input type="text" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-xs focus:border-brand-primary outline-none shadow-inner" placeholder="https://your-server-url.com" />
-                                {window.location.hostname.endsWith('.vercel.app') && (
-                                    <p className="text-xs text-slate-500 mt-2 px-1">
-                                        <b>Tip:</b> If your server is also on Vercel, leave this empty and click Connect.
-                                    </p>
-                                )}
+                                <input type="text" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-xs focus:border-brand-primary outline-none shadow-inner" placeholder="https://your-app-name.up.railway.app" />
+                                <p className="text-[10px] text-slate-400 mt-2 px-1">
+                                    <b>Note:</b> Paste your Railway Deployment URL here. Do <b>NOT</b> paste your Supabase connection string.
+                                </p>
                             </div>
-                            <button onClick={() => checkConnection()} disabled={connectionStatus === 'TESTING'} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all active:scale-95 shadow-lg">{connectionStatus === 'TESTING' ? 'CONNECTING...' : 'Save & Connect'}</button>
+                            <button onClick={() => checkConnection()} disabled={connectionStatus === 'TESTING'} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit">{connectionStatus === 'TESTING' ? 'CONNECTING...' : 'Save & Connect'}</button>
                         </div>
                     </div>
 
@@ -218,32 +225,36 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                 <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl space-y-10 animate-fade-in-down">
                     <div className="text-center border-b pb-8 border-slate-100">
                         <h2 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">Connection Guide</h2>
-                        <p className="text-slate-500 font-medium mt-2">Choose the scenario that matches your setup.</p>
+                        <p className="text-slate-500 font-medium mt-2">Connecting your Railway Backend.</p>
                     </div>
                     <div className="space-y-12">
                         <div className="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
                             <div className="flex items-center gap-4">
-                                <span className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-black text-xl shadow-lg">1</span>
-                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Scenario A: All-in-One on Vercel</h4>
+                                <span className="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center font-black text-xl shadow-lg">1</span>
+                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 1: Configure Railway Variables</h4>
                             </div>
                             <div className="pl-16 space-y-3">
-                                <p className="text-sm text-slate-600 leading-relaxed">This is the recommended and default setup. The app and the server are hosted together on Vercel.</p>
+                                <p className="text-sm text-slate-600 leading-relaxed">Your backend code (the server) needs to know where your database is.</p>
                                 <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
-                                    <li><b>Connection:</b> The app should connect automatically. No URL is needed in the "Cloud Gateway" section.</li>
-                                    <li><b>Troubleshooting:</b> If it fails to connect, the most common reason is a missing environment variable. Go to your <b>Vercel Project Settings &gt; Environment Variables</b> and ensure you have a variable named <code className="bg-slate-200 text-rose-600 font-bold px-1 rounded">DATABASE_URL</code> with the correct connection string to your PostgreSQL database (e.g., from Supabase or Neon).</li>
+                                    <li>Go to your <b>Railway Dashboard</b> and select your project.</li>
+                                    <li>Click on the <b>Variables</b> tab.</li>
+                                    <li>Add a new variable: <code>DATABASE_URL</code></li>
+                                    <li>Value: Paste your <b>Supabase Connection String</b> here.</li>
+                                    <li className="text-rose-600 font-bold">IMPORTANT: Replace `[YOUR-PASSWORD]` in the string with your actual database password!</li>
                                 </ul>
                             </div>
                         </div>
                         <div className="space-y-4 p-6 bg-white rounded-2xl">
                             <div className="flex items-center gap-4">
                                 <span className="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center font-black text-xl">2</span>
-                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Scenario B: Separate Backend (Railway, etc.)</h4>
+                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 2: Connect Frontend to Backend</h4>
                             </div>
                             <div className="pl-16 space-y-3">
-                                <p className="text-sm text-slate-600 leading-relaxed">Use this if your frontend is on Vercel but your `server.js` is hosted on a different platform like Railway or a local machine with Ngrok.</p>
+                                <p className="text-sm text-slate-600 leading-relaxed">Now tell this app where to find your Railway server.</p>
                                  <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
-                                    <li><b>Connection:</b> In the "Cloud Gateway" section, enter the <b>full HTTPS URL</b> provided by your backend host (e.g., `https://my-api.up.railway.app`) and click "Save & Connect".</li>
-                                    <li><b>Troubleshooting:</b> If you get a "Mixed Content" error, your URL must start with <b className="text-rose-600">https://</b>, not `http://`. Vercel requires secure connections. If you get a network error, ensure your backend server is running and the URL is correct.</li>
+                                    <li>Copy your <b>Railway App URL</b> (e.g. <code>https://cls-maasim-ver1.up.railway.app</code>).</li>
+                                    <li>Paste it into the <b>Cloud Gateway</b> input field on this settings page.</li>
+                                    <li>Click <b>Save & Connect</b>.</li>
                                 </ul>
                             </div>
                         </div>

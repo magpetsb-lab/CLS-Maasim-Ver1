@@ -205,7 +205,10 @@ export class LegislativeDB {
             
             if (!response.ok) {
                 let errorDetails = response.statusText;
-                try { errorDetails = (await response.json()).reason || errorDetails; } catch (e) {}
+                try { 
+                    const errorJson = await response.json();
+                    errorDetails = errorJson.reason || errorJson.message || errorJson.error || errorDetails; 
+                } catch (e) {}
                 throw new Error(`Server Error ${response.status}: ${errorDetails}`);
             }
             this.setStatus({ connection: 'connected' });
