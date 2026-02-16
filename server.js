@@ -47,31 +47,38 @@ if (!connectionString) {
     console.error('[SYSTEM] CRITICAL CONFIG ERROR: DATABASE_URL contains placeholder [YOUR-PASSWORD]. Please replace it with your actual password in Railway Variables.');
 }
 
-// 4.1 DNS Resolution Helper (IPv6 Fix)
-// Many cloud providers (Railway) + Supabase can have issues with auto-negotiating IPv6.
-// We manually resolve the hostname to an IPv4 address to force a stable connection.
+// 4.1 DNS Resolution & Provider Detection
 const prepareDatabaseConfig = async () => {
     if (!connectionString) return;
 
     try {
-        // Parse the connection string
         const dbUrl = new URL(connectionString);
         const originalHostname = dbUrl.hostname;
+        
+        // Detect Provider for logging
+        let provider = 'Generic Postgres';
+        if (originalHostname.includes('supabase')) provider = 'Supabase';
+        else if (originalHostname.includes('railway')) provider = 'Railway (Internal/Public)';
+        else if (originalHostname.includes('neon.tech')) provider = 'Neon.tech';
+        else if (originalHostname.includes('aivencloud')) provider = 'Aiven';
+        else if (originalHostname.includes('render')) provider = 'Render';
 
-        // Check if hostname is already an IP
+        console.log(`[SYSTEM] Detected Database Provider: ${provider}`);
+
+        // IPv6/IPv4 Fix: Explicitly resolve to IPv4 if it's not a local or internal address
         const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(originalHostname);
+        const isInternal = originalHostname.endsWith('.internal') || originalHostname === 'localhost';
 
-        if (!isIp && originalHostname !== 'localhost') {
+        if (!isIp && !isInternal) {
             console.log(`[SYSTEM] Resolving DB Host: ${originalHostname} to IPv4...`);
             try {
                 const addresses = await dns.promises.resolve4(originalHostname);
                 if (addresses && addresses.length > 0) {
                     console.log(`[SYSTEM] DNS Success: Mapped ${originalHostname} -> ${addresses[0]}`);
-                    // Replace hostname with IPv4 in connection string
                     dbUrl.hostname = addresses[0];
                     connectionString = dbUrl.toString();
                     
-                    // We must pass the original hostname for SNI (Server Name Indication) if SSL is used
+                    // Essential for SSL to work when connecting via IP
                     poolConfig.ssl = {
                         rejectUnauthorized: false,
                         servername: originalHostname
@@ -79,37 +86,34 @@ const prepareDatabaseConfig = async () => {
                 }
             } catch (dnsErr) {
                 console.warn('[SYSTEM] DNS Resolution failed, falling back to system default:', dnsErr.message);
-                // Fallback to default SSL config
                 poolConfig.ssl = { rejectUnauthorized: false };
             }
         } else {
-             poolConfig.ssl = (connectionString && (connectionString.includes('supabase') || connectionString.includes('neon.tech') || process.env.NODE_ENV === 'production')) 
+             // For internal addresses (Railway private networking) or direct IPs
+             // Production usually requires SSL with rejectUnauthorized: false for self-signed certs in managed DBs
+             poolConfig.ssl = (process.env.NODE_ENV === 'production' || connectionString.includes('sslmode=require')) 
                 ? { rejectUnauthorized: false } 
                 : false;
         }
     } catch (e) {
         console.error('[SYSTEM] URL Parsing Error:', e.message);
-        // Fallback default
         poolConfig.ssl = { rejectUnauthorized: false };
     }
 };
 
-// pg in ESM often requires destructuring from the default export or named import depending on version
 const { Pool } = pg;
 let pool = null;
 
-// Initialize Pool with dynamic config
-// We wrap this in an async function to allow await on DNS resolution
 const initializePool = async () => {
     await prepareDatabaseConfig();
     
     pool = new Pool({
         connectionString: connectionString,
-        family: 4, // Explicitly request IPv4 stack in libpq
+        family: 4, 
         max: 10,   
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000,
-        ...poolConfig // Spread the SSL config determined above
+        ...poolConfig 
     });
 
     pool.on('error', (err) => {
@@ -118,7 +122,6 @@ const initializePool = async () => {
 };
 
 // 5. API ENDPOINTS
-// NOTE: We check if pool is ready before querying
 app.get('/api/health', async (req, res) => {
     try {
         if (!process.env.DATABASE_URL) throw new Error("Server missing DATABASE_URL configuration.");
@@ -138,7 +141,7 @@ app.get('/api/health', async (req, res) => {
         res.status(503).json({ 
             status: 'error', 
             reason: `DB Connection Failed: ${err.message}`, 
-            hint: isNetworkError ? 'Network unreachable. The server is trying to fix IPv6/IPv4 routing.' : 'Check DATABASE_URL credentials in Railway Variables.'
+            hint: isNetworkError ? 'Network unreachable. Check if Database is active and allows public connections.' : 'Check DATABASE_URL credentials in Railway Variables.'
         });
     }
 });
@@ -207,7 +210,6 @@ app.delete('/api/:store/:id', async (req, res) => {
 });
 
 // 6. SPA ROUTING FALLBACK
-// Serve index.html from dist for any unknown paths (Client-side routing support)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
@@ -238,9 +240,8 @@ async function initDb() {
 }
 
 if (process.argv[1] === __filename) {
-    // Start server logic wrapper
     const startServer = async () => {
-        await initializePool(); // Wait for DNS resolution
+        await initializePool();
         
         app.listen(PORT, '0.0.0.0', async () => {
             console.clear();

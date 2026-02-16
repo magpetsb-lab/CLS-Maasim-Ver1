@@ -197,7 +197,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                             <div className="relative flex-grow">
                                 <input type="text" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-xs focus:border-brand-primary outline-none shadow-inner" placeholder="https://your-app-name.up.railway.app" />
                                 <p className="text-[10px] text-slate-400 mt-2 px-1">
-                                    <b>Note:</b> Paste your Railway Deployment URL here. Do <b>NOT</b> paste your Supabase connection string.
+                                    <b>Note:</b> Paste your Railway Deployment URL here. Do <b>NOT</b> paste your Database connection string.
                                 </p>
                             </div>
                             <button onClick={() => checkConnection()} disabled={connectionStatus === 'TESTING'} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit">{connectionStatus === 'TESTING' ? 'CONNECTING...' : 'Save & Connect'}</button>
@@ -231,16 +231,13 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                         <div className="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
                             <div className="flex items-center gap-4">
                                 <span className="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center font-black text-xl shadow-lg">1</span>
-                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 1: Configure Railway Variables</h4>
+                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 1: Configure Database</h4>
                             </div>
                             <div className="pl-16 space-y-3">
-                                <p className="text-sm text-slate-600 leading-relaxed">Your backend code (the server) needs to know where your database is.</p>
+                                <p className="text-sm text-slate-600 leading-relaxed">Choose a database provider and link it to your Railway project.</p>
                                 <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
-                                    <li>Go to your <b>Railway Dashboard</b> and select your project.</li>
-                                    <li>Click on the <b>Variables</b> tab.</li>
-                                    <li>Add a new variable: <code>DATABASE_URL</code></li>
-                                    <li>Value: Paste your <b>Supabase Connection String</b> here.</li>
-                                    <li className="text-rose-600 font-bold">IMPORTANT: Replace `[YOUR-PASSWORD]` in the string with your actual database password!</li>
+                                    <li><b>Option A (Recommended): Railway Database</b><br/>In your Railway dashboard, add a new PostgreSQL service. It will automatically link variables.</li>
+                                    <li><b>Option B: Neon.tech / Aiven</b><br/>Create a database on their platform, copy the Connection String, and add it to Railway Variables as <code>DATABASE_URL</code>.</li>
                                 </ul>
                             </div>
                         </div>
