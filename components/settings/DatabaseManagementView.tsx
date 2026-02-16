@@ -76,6 +76,14 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
             addLog("ERROR: Invalid URL format (DB String detected).");
             return;
         }
+        
+        // Check for reference variable syntax mistake
+        if (urlToTest.includes('${{')) {
+             setErrorDetails("INVALID URL: You pasted the Railway Variable syntax (`${{...}}`). That code belongs in the Railway Dashboard > Variables tab, NOT here.");
+             setConnectionStatus('FAILED');
+             addLog("ERROR: Reference variable syntax detected in frontend.");
+             return;
+        }
 
         setServerUrl(urlToTest);
         setConnectionStatus('TESTING');
@@ -205,7 +213,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                             <div className="relative flex-grow">
                                 <input type="text" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-xs focus:border-brand-primary outline-none shadow-inner" placeholder="https://your-app-name.up.railway.app" />
                                 <p className="text-[10px] text-slate-400 mt-2 px-1">
-                                    <b>Note:</b> Paste your Railway Deployment URL here. Do <b>NOT</b> paste your Database connection string.
+                                    <b>Note:</b> Paste your Railway Deployment URL here. Do <b>NOT</b> paste the <code>{`\${{...}}`}</code> variable code here.
                                 </p>
                             </div>
                             <button onClick={() => checkConnection()} disabled={connectionStatus === 'TESTING'} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit">{connectionStatus === 'TESTING' ? 'CONNECTING...' : 'Save & Connect'}</button>
@@ -239,25 +247,29 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                         <div className="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
                             <div className="flex items-center gap-4">
                                 <span className="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center font-black text-xl shadow-lg">1</span>
-                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 1: Configure Database</h4>
+                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 1: Link Database (The "Magic Key")</h4>
                             </div>
                             <div className="pl-16 space-y-3">
-                                <p className="text-sm text-slate-600 leading-relaxed">Choose a database provider and link it to your Railway project.</p>
+                                <p className="text-sm text-slate-600 leading-relaxed">This step connects your App to your Database internally.</p>
                                 <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
-                                    <li><b>Option A (Recommended): Railway Database</b><br/>In your Railway dashboard, add a new PostgreSQL service. It will automatically link variables.</li>
-                                    <li><b>Option B: Neon.tech / Aiven</b><br/>Create a database on their platform, copy the Connection String, and add it to Railway Variables as <code>DATABASE_URL</code>.</li>
+                                    <li>Go to your <b>Railway Dashboard</b> and click on your <b>App Service</b>.</li>
+                                    <li>Go to the <b>Variables</b> tab.</li>
+                                    <li>Click <b>New Variable</b>.</li>
+                                    <li>Name: <code>DATABASE_URL</code></li>
+                                    <li>Value: Type <code>{`\${{`}</code> and select <b>Postgres</b> then <b>DATABASE_URL</b> from the dropdown.</li>
+                                    <li>The final value should look like: <code>{`\${{Postgres.DATABASE_URL}}`}</code></li>
                                 </ul>
                             </div>
                         </div>
                         <div className="space-y-4 p-6 bg-white rounded-2xl">
                             <div className="flex items-center gap-4">
                                 <span className="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center font-black text-xl">2</span>
-                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 2: Connect Frontend to Backend</h4>
+                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 2: Connect Frontend</h4>
                             </div>
                             <div className="pl-16 space-y-3">
                                 <p className="text-sm text-slate-600 leading-relaxed">Now tell this app where to find your Railway server.</p>
                                  <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
-                                    <li>Copy your <b>Railway App URL</b> (e.g. <code>https://cls-maasim-ver1.up.railway.app</code>).</li>
+                                    <li>Copy your <b>Railway App Public URL</b> (e.g. <code>https://cls-maasim-ver1.up.railway.app</code>).</li>
                                     <li>Paste it into the <b>Cloud Gateway</b> input field on this settings page.</li>
                                     <li>Click <b>Save & Connect</b>.</li>
                                 </ul>
@@ -288,8 +300,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                             <h4 className="font-bold text-slate-800 uppercase mb-2">Error: "ENETUNREACH" or "ECONNREFUSED"</h4>
                             <p className="text-xs text-slate-600 mb-4">The app cannot reach the database.</p>
                             <ul className="text-xs text-slate-700 list-disc pl-4 space-y-1">
-                                <li><b>Local App:</b> If running locally, you MUST use the <b>Public Connection String</b> (e.g. <code>roundhouse.proxy.rlwy.net</code>). Enable "Public Networking" in Railway DB settings.</li>
-                                <li><b>Deployed App:</b> Use the <b>Private Connection String</b> (e.g. <code>.railway.internal</code>).</li>
+                                <li><b>Solution:</b> Use the Reference Variable <code>{`\${{Postgres.DATABASE_URL}}`}</code> in the Railway Dashboard > Variables. This keeps the connection internal and secure.</li>
                             </ul>
                         </div>
                     </div>
