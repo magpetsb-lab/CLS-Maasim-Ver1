@@ -1,3 +1,4 @@
+
 import express from 'express';
 import pg from 'pg';
 import cors from 'cors';
@@ -226,6 +227,14 @@ async function initDbWithRetry(retries = 5, delay = 2000) {
         let client;
         try {
             client = await pool.connect();
+            
+            // Fix for Railway 'pg_stat_statements' error in logs
+            try {
+                await client.query('CREATE EXTENSION IF NOT EXISTS pg_stat_statements;');
+            } catch (extError) {
+                console.warn('[DB] Could not enable pg_stat_statements (harmless for app, but Railway metrics might fail):', extError.message);
+            }
+
             await client.query(`
                 CREATE TABLE IF NOT EXISTS legislative_data (
                     id TEXT PRIMARY KEY,
