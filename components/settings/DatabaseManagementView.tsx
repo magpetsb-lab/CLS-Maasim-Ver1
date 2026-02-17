@@ -27,6 +27,9 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
     const [isDownloading, setIsDownloading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [queueSize, setQueueSize] = useState(0);
+    
+    // Check if API Key is injected by Vite during build
+    const hasApiKey = !!process.env.API_KEY;
 
     const addLog = (msg: string) => {
         setDiagnosticLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 10));
@@ -60,6 +63,9 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
         if (initialUrl) {
             setServerUrl(initialUrl);
             checkConnection(initialUrl, true); // Initial quiet check
+        } else {
+            // Check default relative connection
+            checkConnection('', true);
         }
         updatePermissionStatuses();
         
@@ -213,16 +219,32 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                             <div className="relative flex-grow">
                                 <input type="text" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-xs focus:border-brand-primary outline-none shadow-inner" placeholder="https://your-app-name.up.railway.app" />
                                 <p className="text-[10px] text-slate-400 mt-2 px-1">
-                                    <b>Note:</b> Paste your Railway Deployment URL here. Do <b>NOT</b> paste the <code>{`\${{...}}`}</code> variable code here.
+                                    <b>Note:</b> If deployed on Railway, you can usually leave this blank or paste your App Public URL.
                                 </p>
                             </div>
                             <button onClick={() => checkConnection()} disabled={connectionStatus === 'TESTING'} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit">{connectionStatus === 'TESTING' ? 'CONNECTING...' : 'Save & Connect'}</button>
                         </div>
                     </div>
 
-                    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
-                        <p className="text-slate-500 font-bold uppercase mb-3 tracking-widest text-[9px]">Handshake Diagnostics</p>
-                        <div className="bg-slate-900 p-6 rounded-3xl text-emerald-400 font-mono text-[10px] shadow-inner border-4 border-slate-800 space-y-1.5 h-32 overflow-y-auto">{diagnosticLog.length === 0 ? <p className="text-slate-700 italic">No activity logs...</p> : diagnosticLog.map((l, i) => (<p key={i} className={l.includes('FAILED') || l.includes('ERROR') ? 'text-rose-400 font-black' : ''}>&gt;&gt; {l}</p>))}</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
+                            <p className="text-slate-500 font-bold uppercase mb-3 tracking-widest text-[9px]">System Status Indicators</p>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl">
+                                    <span className="text-xs font-bold text-slate-700">Database Connection</span>
+                                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${connectionStatus === 'CONNECTED' ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'}`}>{connectionStatus}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl">
+                                    <span className="text-xs font-bold text-slate-700">AI Assistant (Gemini)</span>
+                                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${hasApiKey ? 'bg-indigo-200 text-indigo-800' : 'bg-slate-200 text-slate-500'}`}>{hasApiKey ? 'Active' : 'Missing Key'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
+                            <p className="text-slate-500 font-bold uppercase mb-3 tracking-widest text-[9px]">Handshake Diagnostics</p>
+                            <div className="bg-slate-900 p-6 rounded-3xl text-emerald-400 font-mono text-[10px] shadow-inner border-4 border-slate-800 space-y-1.5 h-32 overflow-y-auto">{diagnosticLog.length === 0 ? <p className="text-slate-700 italic">No activity logs...</p> : diagnosticLog.map((l, i) => (<p key={i} className={l.includes('FAILED') || l.includes('ERROR') ? 'text-rose-400 font-black' : ''}>&gt;&gt; {l}</p>))}</div>
+                        </div>
                     </div>
 
                     <div className="bg-white border-2 border-rose-200 rounded-[2.5rem] p-8 shadow-sm">
@@ -243,35 +265,46 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                         <h2 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">Connection Guide</h2>
                         <p className="text-slate-500 font-medium mt-2">Connecting your Railway Backend.</p>
                     </div>
-                    <div className="space-y-12">
+                    <div className="space-y-8">
                         <div className="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
                             <div className="flex items-center gap-4">
                                 <span className="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center font-black text-xl shadow-lg">1</span>
-                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 1: Link Database (The "Magic Key")</h4>
+                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Link Database (Postgres)</h4>
                             </div>
-                            <div className="pl-16 space-y-3">
-                                <p className="text-sm text-slate-600 leading-relaxed">This step connects your App to your Database internally.</p>
-                                <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
-                                    <li>Go to your <b>Railway Dashboard</b> and click on your <b>App Service</b>.</li>
-                                    <li>Go to the <b>Variables</b> tab.</li>
-                                    <li>Click <b>New Variable</b>.</li>
-                                    <li>Name: <code>DATABASE_URL</code></li>
-                                    <li>Value: Type <code>{`\${{`}</code> and select <b>Postgres</b> then <b>DATABASE_URL</b> from the dropdown.</li>
-                                    <li>The final value should look like: <code>{`\${{Postgres.DATABASE_URL}}`}</code></li>
-                                </ul>
+                            <div className="pl-16 space-y-2">
+                                <p className="text-sm text-slate-600">In <b>Railway Dashboard</b> &gt; <b>Variables</b>, add:</p>
+                                <div className="bg-slate-900 text-slate-200 p-3 rounded-lg text-xs font-mono">
+                                    DATABASE_URL = {`\${{Postgres.DATABASE_URL}}`}
+                                </div>
+                                <p className="text-xs text-emerald-600 font-bold">You have already done this step!</p>
                             </div>
                         </div>
-                        <div className="space-y-4 p-6 bg-white rounded-2xl">
+
+                        <div className="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
                             <div className="flex items-center gap-4">
-                                <span className="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center font-black text-xl">2</span>
-                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Step 2: Connect Frontend</h4>
+                                <span className="w-12 h-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center font-black text-xl shadow-lg">2</span>
+                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Enable AI Features</h4>
+                            </div>
+                            <div className="pl-16 space-y-2">
+                                <p className="text-sm text-slate-600">For the AI Assistant to work, add your Google Gemini Key:</p>
+                                <div className="bg-slate-900 text-slate-200 p-3 rounded-lg text-xs font-mono">
+                                    API_KEY = AIzaSyD... (Your Actual API Key)
+                                </div>
+                                <p className="text-xs text-slate-500">Add this in Railway Variables. A redeploy may be required.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 p-6 bg-white rounded-2xl border-2 border-sky-100">
+                            <div className="flex items-center gap-4">
+                                <span className="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center font-black text-xl">3</span>
+                                <h4 className="font-black text-slate-900 uppercase text-lg italic">Verify Connection</h4>
                             </div>
                             <div className="pl-16 space-y-3">
-                                <p className="text-sm text-slate-600 leading-relaxed">Now tell this app where to find your Railway server.</p>
-                                 <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
-                                    <li>Copy your <b>Railway App Public URL</b> (e.g. <code>https://cls-maasim-ver1.up.railway.app</code>).</li>
-                                    <li>Paste it into the <b>Cloud Gateway</b> input field on this settings page.</li>
-                                    <li>Click <b>Save & Connect</b>.</li>
+                                <p className="text-sm text-slate-600">Since your frontend and backend are on the same Railway service:</p>
+                                <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
+                                    <li>The app should connect automatically.</li>
+                                    <li>If the <b>Cloud Gateway</b> status above says <b>CONNECTED</b> or <b>SYNC ONLINE</b>, you are done.</li>
+                                    <li>If it says <b>OFFLINE</b>, copy your <b>Railway Public URL</b> (e.g. <code>https://cls-maasim.up.railway.app</code>) and paste it into the <b>Cloud Gateway</b> input box on this page, then click Save.</li>
                                 </ul>
                             </div>
                         </div>
