@@ -300,7 +300,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                             <h4 className="font-bold text-slate-800 uppercase mb-2">Error: "ENETUNREACH" or "ECONNREFUSED"</h4>
                             <p className="text-xs text-slate-600 mb-4">The app cannot reach the database.</p>
                             <ul className="text-xs text-slate-700 list-disc pl-4 space-y-1">
-                                <li><b>Solution:</b> Use the Reference Variable <code>{`\${{Postgres.DATABASE_URL}}`}</code> in the Railway Dashboard > Variables. This keeps the connection internal and secure.</li>
+                                <li><b>Solution:</b> Use the Reference Variable <code>{`\${{Postgres.DATABASE_URL}}`}</code> in the Railway Dashboard &gt; Variables. This keeps the connection internal and secure.</li>
                             </ul>
                         </div>
                     </div>
