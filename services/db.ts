@@ -279,6 +279,7 @@ export class LegislativeDB {
             try {
                 const serverData = await this.apiRequest(`/api/${storeName}`);
                 if (serverData) {
+                    // Update local cache with server data
                     await this.seedStore(storeName, serverData);
                     return serverData;
                 }
@@ -286,6 +287,7 @@ export class LegislativeDB {
                 console.warn(`[API] Could not sync ${storeName}, using local data.`, e);
             }
         }
+        // Fallback to local data if server is unreachable or returns no data
         return this.getAllFromLocal(storeName);
     }
 
