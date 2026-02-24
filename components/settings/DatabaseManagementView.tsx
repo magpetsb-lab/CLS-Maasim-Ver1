@@ -27,6 +27,7 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
     const [isDownloading, setIsDownloading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [queueSize, setQueueSize] = useState(0);
+    const [autoBackupTime, setAutoBackupTime] = useState<string>('');
     
     // Check if API Key is injected by Vite during build
     const hasApiKey = !!process.env.API_KEY;
@@ -67,10 +68,20 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
             // Check default relative connection
             checkConnection('', true);
         }
+        
+        const savedTime = dbService.getAutoBackupTime();
+        if (savedTime) setAutoBackupTime(savedTime);
+
         updatePermissionStatuses();
         
         return () => dbService.unsubscribe(handleStatusUpdate);
     }, []);
+
+    const handleSaveAutoBackup = () => {
+        dbService.setAutoBackupTime(autoBackupTime || null);
+        addLog(`SUCCESS: Auto-backup time set to ${autoBackupTime || 'Disabled'}`);
+        alert('Auto-backup configuration saved.');
+    };
 
     const checkConnection = async (customUrl?: string, isInitialCheck = false) => {
         const urlToTest = typeof customUrl === 'string' ? customUrl.trim().replace(/\/$/, '') : serverUrl.trim().replace(/\/$/, '');
@@ -255,6 +266,26 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                             <button onClick={handleResetSystem} disabled={isResetting} className="bg-rose-600 text-white px-6 py-4 rounded-2xl font-black text-sm hover:bg-rose-700 transition-all active:scale-95 shadow-lg disabled:opacity-50">{isResetting ? 'Resetting...' : 'Reset Local System'}</button>
                         </div>
                          {connectionStatus !== 'CONNECTED' && <p className="text-xs text-rose-600 font-medium text-center mt-4">Cloud backup is disabled. Please connect to the server first.</p>}
+                    </div>
+
+                    <div className="bg-white border-2 border-indigo-200 rounded-[2.5rem] p-8 shadow-sm">
+                        <h4 className="font-black text-indigo-900 uppercase tracking-tight text-base mb-2">Local Database Auto-Backup Configuration</h4>
+                        <p className="text-sm text-indigo-800 mb-6">Schedule a daily automatic backup of your local database.</p>
+                        <div className="flex flex-col sm:flex-row gap-4 items-end">
+                            <div className="flex-grow w-full sm:w-auto">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Backup Time (Daily)</label>
+                                <input 
+                                    type="time" 
+                                    value={autoBackupTime} 
+                                    onChange={(e) => setAutoBackupTime(e.target.value)} 
+                                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-sm focus:border-indigo-500 outline-none shadow-inner" 
+                                />
+                            </div>
+                            <button onClick={handleSaveAutoBackup} className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-indigo-700 transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit">Save Configuration</button>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-4 italic">
+                            Note: The application must be open in your browser at the scheduled time for the backup to trigger.
+                        </p>
                     </div>
                 </>
             )}

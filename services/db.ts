@@ -41,6 +41,8 @@ export class LegislativeDB {
     private status: SyncStatus = { connection: 'offline', queueSize: 0 };
     private listeners: ((status: SyncStatus) => void)[] = [];
 
+    private autoBackupInterval: number | null = null;
+
     constructor() {
         const storedUrl = localStorage.getItem('remote_server_url');
         if (storedUrl) {
@@ -54,6 +56,7 @@ export class LegislativeDB {
             this.serverUrl = ''; 
             this.status.connection = 'connected';
         }
+        this.startAutoBackupScheduler();
     }
 
     public subscribe(listener: (status: SyncStatus) => void) {
@@ -76,6 +79,56 @@ export class LegislativeDB {
 
     public getStatus(): SyncStatus {
         return this.status;
+    }
+
+    public setAutoBackupTime(time: string | null) {
+        if (time) {
+            localStorage.setItem('auto_backup_time', time);
+        } else {
+            localStorage.removeItem('auto_backup_time');
+        }
+    }
+
+    public getAutoBackupTime(): string | null {
+        return localStorage.getItem('auto_backup_time');
+    }
+
+    private startAutoBackupScheduler() {
+        if (this.autoBackupInterval) clearInterval(this.autoBackupInterval);
+        // Check every minute
+        this.autoBackupInterval = window.setInterval(() => this.checkAutoBackup(), 60000);
+    }
+
+    private async checkAutoBackup() {
+        const time = this.getAutoBackupTime();
+        if (!time) return;
+
+        const now = new Date();
+        const [hours, minutes] = time.split(':').map(Number);
+        
+        if (now.getHours() === hours && now.getMinutes() === minutes) {
+            const lastBackup = localStorage.getItem('last_auto_backup_date');
+            const today = now.toDateString();
+            
+            if (lastBackup !== today) {
+                console.log('[DB] Triggering auto-backup...');
+                await this.triggerAutoDownload();
+                localStorage.setItem('last_auto_backup_date', today);
+            }
+        }
+    }
+
+    private async triggerAutoDownload() {
+         const json = await this.exportLocalDatabase();
+         const blob = new Blob([json], { type: 'application/json' });
+         const url = URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url;
+         a.download = `cls_auto_backup_${new Date().toISOString().split('T')[0]}.json`;
+         document.body.appendChild(a);
+         a.click();
+         document.body.removeChild(a);
+         URL.revokeObjectURL(url);
     }
 
     async init(): Promise<void> {
