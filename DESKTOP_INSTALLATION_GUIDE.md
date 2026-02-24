@@ -1,5 +1,5 @@
 # Desktop Installation & User Guide
-## Computerized Legislative System - Maasim
+## Computerized Legislative Tracking System - Maasim
 
 This guide details how to install and run the Legislative System on a standalone desktop computer (Windows, Mac, or Linux) without needing a cloud server.
 

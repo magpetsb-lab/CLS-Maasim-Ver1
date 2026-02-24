@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "Starting Computerized Legislative System..."
+echo "Starting Computerized Legislative Tracking System..."
 echo ""
 echo "Checking for updates..."
 npm install

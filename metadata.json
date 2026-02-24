@@ -1,5 +1,5 @@
 {
-  "name": "Computerized Legislative System-Maasim",
+  "name": "Computerized Legislative Tracking System-Maasim",
   "description": "A standalone desktop application for legislative management with offline-first local database synchronization.",
   "requestFramePermissions": [
     "camera",

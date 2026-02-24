@@ -131,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
                         Municipality of Maasim
                     </h2>
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tighter italic uppercase leading-none text-white drop-shadow-lg">
-                        Computerized Legislative System
+                        Computerized Legislative Tracking System
                     </h1>
                     <div className="flex items-center mt-3">
                         <div className="h-0.5 w-12 bg-blue-400 mr-3"></div>

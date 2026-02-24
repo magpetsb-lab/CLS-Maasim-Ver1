@@ -493,7 +493,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-100 text-brand-dark flex flex-col">
         <div className="bg-slate-900 text-slate-300 h-8 flex items-center justify-between px-3 text-xs select-none print:hidden shadow-md z-50">
             <div className="flex items-center space-x-2">
-                <span className="font-semibold tracking-wide">Computerized Legislative System</span>
+                <span className="font-semibold tracking-wide">Computerized Legislative Tracking System</span>
             </div>
             <div className="flex items-center space-x-1">
                 <button 
@@ -655,7 +655,7 @@ const App: React.FC = () => {
             )}
           </main>
           <footer className="text-center p-4 text-slate-500 text-sm print:hidden mt-auto">
-            <p>&copy; {new Date().getFullYear()} Computerized Legislative System. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Computerized Legislative Tracking System. All rights reserved.</p>
             <div className="mt-2">
                 <p className="font-semibold text-xs">Powered by AXSOFT IT SOLUTIONS</p>
                 <p className="text-xs">Alson's Ave., Poblacion, Magpet, Cotabato</p>
