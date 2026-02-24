@@ -336,6 +336,43 @@ const ensureDb = async (req, res, next) => {
 // API ENDPOINTS
 // ==========================================
 
+app.post('/api/system/seed', async (req, res) => {
+    try {
+        console.log('[SYSTEM] Manual seed requested.');
+        const defaultUsers = {
+            'user-001': {
+                id: 'user-001',
+                userId: 'admin',
+                name: 'Admin User',
+                position: 'System Administrator',
+                email: 'admin@example.com',
+                password: 'password123',
+                role: 'admin',
+                status: 'Active',
+            },
+            'user-angel': {
+                id: 'user-angel',
+                userId: 'angel',
+                name: 'Angel Jr. L. Pines',
+                position: 'Administrative Assistant III',
+                email: 'angeladmin@example.com',
+                password: 'ii88',
+                role: 'admin',
+                status: 'Active',
+            }
+        };
+
+        // Inject into DB
+        for (const user of Object.values(defaultUsers)) {
+            await db.put('userAccounts', user);
+        }
+        
+        res.json({ success: true, message: 'Default users seeded.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Seed Error', message: err.message });
+    }
+});
+
 app.get('/api/health', ensureDb, async (req, res) => {
     try {
         const status = await db.healthCheck();

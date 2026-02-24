@@ -530,6 +530,7 @@ const App: React.FC = () => {
             setLoginError(null);
           }}
           error={loginError}
+          userCount={userAccounts.length}
         />
       )}
       

@@ -4,15 +4,31 @@ interface LoginModalProps {
   onLogin: (userId: string, password: string) => void;
   onCancel: () => void;
   error: string | null;
+  userCount: number;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onCancel, error }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onCancel, error, userCount }) => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onLogin(userId, password);
+  };
+
+  const handleSeed = async () => {
+    if (!confirm("This will reset the user database to default. Continue?")) return;
+    setIsSeeding(true);
+    try {
+        await fetch('/api/system/seed', { method: 'POST' });
+        alert('System reset complete. Please refresh the page.');
+        window.location.reload();
+    } catch (e) {
+        alert('Failed to reset system.');
+    } finally {
+        setIsSeeding(false);
+    }
   };
 
   return (
@@ -23,6 +39,21 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onCancel, error }) => 
             <h2 className="text-2xl font-bold text-brand-primary text-center mb-2">System Login</h2>
             <p className="text-center text-slate-500 mb-6">Enter your credentials to access the system.</p>
             
+            {userCount === 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md mb-4 text-sm">
+                    <p className="font-bold">No users found!</p>
+                    <p className="mb-2">The database appears to be empty.</p>
+                    <button 
+                        type="button"
+                        onClick={handleSeed}
+                        disabled={isSeeding}
+                        className="text-blue-600 underline hover:text-blue-800"
+                    >
+                        {isSeeding ? 'Initializing...' : 'Click here to initialize default users'}
+                    </button>
+                </div>
+            )}
+
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4 text-sm" role="alert">
                     <p>{error}</p>
