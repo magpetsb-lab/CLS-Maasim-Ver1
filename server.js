@@ -184,11 +184,53 @@ class LocalFileAdapter extends DbAdapter {
         try {
             if (fs.existsSync(this.filePath)) {
                 const fileContent = fs.readFileSync(this.filePath, 'utf-8');
-                this.data = JSON.parse(fileContent);
+                try {
+                    this.data = JSON.parse(fileContent);
+                } catch (e) {
+                    console.error('[DB] Corrupt DB file, resetting...');
+                    this.data = {};
+                }
             } else {
                 this.data = {};
+            }
+
+            // Ensure structure exists
+            if (!this.data.users) this.data.users = {};
+            if (!this.data.resolutions) this.data.resolutions = {};
+            if (!this.data.ordinances) this.data.ordinances = {};
+            if (!this.data.session_minutes) this.data.session_minutes = {};
+            if (!this.data.committee_reports) this.data.committee_reports = {};
+            if (!this.data.legislators) this.data.legislators = {};
+            if (!this.data.incoming_documents) this.data.incoming_documents = {};
+
+            // Seed Users if empty
+            if (Object.keys(this.data.users).length === 0) {
+                console.log('[DB] Seeding default users...');
+                this.data.users = {
+                    'user-001': {
+                        id: 'user-001',
+                        userId: 'admin',
+                        name: 'Admin User',
+                        position: 'System Administrator',
+                        email: 'admin@example.com',
+                        password: 'password123',
+                        role: 'admin',
+                        status: 'Active',
+                    },
+                    'user-angel': {
+                        id: 'user-angel',
+                        userId: 'angel',
+                        name: 'Angel Jr. L. Pines',
+                        position: 'Administrative Assistant III',
+                        email: 'angeladmin@example.com',
+                        password: 'ii88',
+                        role: 'admin',
+                        status: 'Active',
+                    }
+                };
                 this._save();
             }
+
             console.log(`[DB] Local File DB initialized at: ${this.filePath}`);
             
             // Auto-save every 5 seconds if dirty
