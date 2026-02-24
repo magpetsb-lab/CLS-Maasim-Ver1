@@ -443,7 +443,50 @@ export class LegislativeDB {
     async restoreFullBackup(backupJson: string): Promise<void> {
         if (!this.db) return;
         const backup = JSON.parse(backupJson);
-        const data = backup.data;
+        let data = backup.data;
+
+        // Handle raw file backup format (where keys are store names at root)
+        if (!data && (backup.users || backup.resolutions || backup.ordinances)) {
+            console.log('[DB] Detected raw file backup format. Converting...');
+            data = {};
+            for (const storeName of ALL_STORES) {
+                // Map the store name to the key in the raw file (e.g., 'userAccounts' might be 'users' in raw file)
+                // However, LocalFileAdapter uses same keys as store names mostly, except 'users' vs 'userAccounts'
+                // Let's check the mapping in LocalFileAdapter:
+                // users -> userAccounts
+                // resolutions -> resolutions
+                // ordinances -> ordinances
+                // session_minutes -> sessionMinutes
+                // committee_reports -> committeeReports
+                // legislators -> legislators
+                // incoming_documents -> incomingDocuments
+                // ...
+                
+                let rawKey = storeName;
+                if (storeName === 'userAccounts') rawKey = 'users';
+                if (storeName === 'sessionMinutes') rawKey = 'session_minutes';
+                if (storeName === 'committeeReports') rawKey = 'committee_reports';
+                if (storeName === 'incomingDocuments') rawKey = 'incoming_documents';
+                if (storeName === 'committeeMemberships') rawKey = 'committee_memberships';
+                if (storeName === 'legislativeMeasures') rawKey = 'legislative_measures';
+                if (storeName === 'documentTypes') rawKey = 'document_types';
+                if (storeName === 'documentStatuses') rawKey = 'document_statuses';
+                if (storeName === 'sessionAgendas') rawKey = 'session_agendas';
+
+                const storeData = backup[rawKey] || backup[storeName];
+                if (storeData) {
+                    // Raw file stores as map { id: item }, convert to array
+                    data[storeName] = Object.values(storeData);
+                } else {
+                    data[storeName] = [];
+                }
+            }
+        }
+
+        if (!data) {
+            throw new Error('Invalid backup format: Missing data object.');
+        }
+
         for (const storeName of ALL_STORES) {
             const tx = this.db.transaction(storeName, 'readwrite');
             tx.objectStore(storeName).clear();

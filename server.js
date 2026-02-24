@@ -376,8 +376,8 @@ app.post('/api/system/seed', async (req, res) => {
 app.post('/api/system/backup', ensureDb, async (req, res) => {
     try {
         const { path: backupPath, data } = req.body;
-        if (!backupPath || !data) {
-            return res.status(400).json({ error: 'Missing path or data' });
+        if (!backupPath) {
+            return res.status(400).json({ error: 'Missing backup path' });
         }
 
         // Ensure directory exists
@@ -387,6 +387,28 @@ app.post('/api/system/backup', ensureDb, async (req, res) => {
              } catch (e) {
                  return res.status(500).json({ error: 'Invalid Path', message: 'Could not create directory: ' + e.message });
              }
+        }
+
+        // OPTIMIZATION: If using LocalFileAdapter, copy the file directly
+        if (db instanceof LocalFileAdapter) {
+            const fileName = `local_database_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+            const fullPath = path.join(backupPath, fileName);
+            
+            // Force save to ensure consistency
+            if (db.isDirty) db._save();
+            
+            try {
+                fs.copyFileSync(db.filePath, fullPath);
+                console.log(`[BACKUP] Direct file copy to ${fullPath}`);
+                return res.json({ success: true, path: fullPath });
+            } catch (e) {
+                console.error('[BACKUP] File copy failed, falling back to data write:', e);
+                // Fallthrough to standard write if copy fails
+            }
+        }
+
+        if (!data) {
+             return res.status(400).json({ error: 'Missing data payload for non-local backup' });
         }
 
         const fileName = `cls_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
