@@ -19,10 +19,6 @@ export default defineConfig(({ mode }) => {
       viteStaticCopy({
         targets: [
           {
-            src: 'maasim-logo.png',
-            dest: '.'
-          },
-          {
             src: 'manifest.json',
             dest: '.'
           },
