@@ -258,6 +258,7 @@ class LocalFileAdapter extends DbAdapter {
 // ==========================================
 
 let db;
+let dbPromise;
 
 const initDatabase = async () => {
     if (process.env.DATABASE_URL) {
@@ -268,15 +269,33 @@ const initDatabase = async () => {
         db = new LocalFileAdapter(path.join(__dirname, 'local_database.json'));
     }
     await db.connect();
+    return db;
+};
+
+// Initialize DB immediately but store promise
+dbPromise = initDatabase().catch(err => {
+    console.error('[SYSTEM] Failed to initialize database:', err);
+    process.exit(1);
+});
+
+// Middleware to ensure DB is ready
+const ensureDb = async (req, res, next) => {
+    if (!db) {
+        try {
+            await dbPromise;
+        } catch (err) {
+            return res.status(500).json({ error: 'Database initialization failed' });
+        }
+    }
+    next();
 };
 
 // ==========================================
 // API ENDPOINTS
 // ==========================================
 
-app.get('/api/health', async (req, res) => {
+app.get('/api/health', ensureDb, async (req, res) => {
     try {
-        if (!db) throw new Error("DB initializing...");
         const status = await db.healthCheck();
         res.json({ 
             status: 'ok', 
@@ -289,7 +308,7 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
-app.get('/api/system/export', async (req, res) => {
+app.get('/api/system/export', ensureDb, async (req, res) => {
     try {
         const data = await db.export();
         res.json({
@@ -302,7 +321,7 @@ app.get('/api/system/export', async (req, res) => {
     }
 });
 
-app.get('/api/:store', async (req, res) => {
+app.get('/api/:store', ensureDb, async (req, res) => {
     try {
         const data = await db.getAll(req.params.store);
         res.json(data);
@@ -311,7 +330,7 @@ app.get('/api/:store', async (req, res) => {
     }
 });
 
-app.post('/api/:store', async (req, res) => {
+app.post('/api/:store', ensureDb, async (req, res) => {
     try {
         const { store } = req.params;
         const content = req.body;
@@ -322,7 +341,7 @@ app.post('/api/:store', async (req, res) => {
     }
 });
 
-app.delete('/api/:store/:id', async (req, res) => {
+app.delete('/api/:store/:id', ensureDb, async (req, res) => {
     try {
         await db.delete(req.params.store, req.params.id);
         res.status(200).json({ success: true, id: req.params.id });
@@ -339,7 +358,7 @@ app.get('*', (req, res) => {
 // STARTUP
 if (process.argv[1] === __filename) {
     const startServer = async () => {
-        await initDatabase();
+        // DB init is already started above
         
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`\n[SYSTEM] Server running on port ${PORT}`);
