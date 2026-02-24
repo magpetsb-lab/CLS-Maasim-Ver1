@@ -170,58 +170,63 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
     };
 
     const handlePdfExport = async (shouldPrint: boolean) => {
-        if (!(window as any).jspdf) return;
-        const { jsPDF } = (window as any).jspdf;
-        const logoData = await getBase64Logo();
-        
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const margin = 25, pageWidth = 210, pageHeight = 297, contentWidth = pageWidth - (margin * 2);
-        let cursorY = margin;
-
-        const addHeader = (pageNum: number) => {
-            if (logoData) {
-                doc.addImage(logoData, 'PNG', margin, 12, 22, 22);
-            }
+        try {
+            if (!(window as any).jspdf) return alert("PDF library not loaded.");
+            const { jsPDF } = (window as any).jspdf;
+            const logoData = await getBase64Logo();
             
-            doc.setFontSize(10).setFont('helvetica', 'bold').text("MUNICIPALITY OF MAASIM", pageWidth/2 + 12, 16, { align: 'center' });
-            doc.setFontSize(12).text("OFFICE OF THE SANGGUNIANG BAYAN", pageWidth/2 + 12, 22, { align: 'center' });
-            doc.setFontSize(9).setFont('helvetica', 'normal').text("Province of Sarangani", pageWidth/2 + 12, 27, { align: 'center' });
-            
-            doc.setDrawColor(30, 58, 138).setLineWidth(0.6).line(margin, 35, pageWidth - margin, 35);
-            
-            if (pageNum > 1) {
-                doc.setFontSize(8).setFont('helvetica', 'italic').text(`(Continuation of ${formData.sessionNumber}) - Page ${pageNum}`, margin, 42);
-                cursorY = 50;
-            } else {
-                doc.setFontSize(14).setFont('helvetica', 'bold').text(`JOURNAL OF PROCEEDINGS`, pageWidth/2, 50, { align: 'center' });
-                doc.setFontSize(10).setFont('helvetica', 'normal').text(`${formData.sessionType} Session No: ${formData.sessionNumber} | Date: ${formData.sessionDate}`, pageWidth/2, 56, { align: 'center' });
-                cursorY = 70;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const margin = 25, pageWidth = 210, pageHeight = 297, contentWidth = pageWidth - (margin * 2);
+            let cursorY = margin;
+
+            const addHeader = (pageNum: number) => {
+                if (logoData) {
+                    doc.addImage(logoData, 'PNG', margin, 12, 22, 22);
+                }
+                
+                doc.setFontSize(10).setFont('helvetica', 'bold').text("MUNICIPALITY OF MAASIM", pageWidth/2 + 12, 16, { align: 'center' });
+                doc.setFontSize(12).text("OFFICE OF THE SANGGUNIANG BAYAN", pageWidth/2 + 12, 22, { align: 'center' });
+                doc.setFontSize(9).setFont('helvetica', 'normal').text("Province of Sarangani", pageWidth/2 + 12, 27, { align: 'center' });
+                
+                doc.setDrawColor(30, 58, 138).setLineWidth(0.6).line(margin, 35, pageWidth - margin, 35);
+                
+                if (pageNum > 1) {
+                    doc.setFontSize(8).setFont('helvetica', 'italic').text(`(Continuation of ${formData.sessionNumber}) - Page ${pageNum}`, margin, 42);
+                    cursorY = 50;
+                } else {
+                    doc.setFontSize(14).setFont('helvetica', 'bold').text(`JOURNAL OF PROCEEDINGS`, pageWidth/2, 50, { align: 'center' });
+                    doc.setFontSize(10).setFont('helvetica', 'normal').text(`${formData.sessionType} Session No: ${formData.sessionNumber} | Date: ${formData.sessionDate}`, pageWidth/2, 56, { align: 'center' });
+                    cursorY = 70;
+                }
+            };
+
+            addHeader(1);
+            const splitText = doc.splitTextToSize(formData.minutesContent || "No content transcribed.", contentWidth);
+            doc.setFontSize(11).setFont('times', 'normal');
+
+            splitText.forEach((line: string) => {
+                if (cursorY > pageHeight - 25) {
+                    doc.addPage();
+                    addHeader(doc.internal.getNumberOfPages());
+                    doc.setFontSize(11).setFont('times', 'normal');
+                }
+                doc.text(line, margin, cursorY);
+                cursorY += 7;
+            });
+
+            const totalPages = doc.internal.getNumberOfPages();
+            for(let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8).setFont('helvetica', 'normal').text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+                doc.text(`Maasim Legislative System - Official Report`, margin, pageHeight - 10);
             }
-        };
 
-        addHeader(1);
-        const splitText = doc.splitTextToSize(formData.minutesContent || "No content transcribed.", contentWidth);
-        doc.setFontSize(11).setFont('times', 'normal');
-
-        splitText.forEach((line: string) => {
-            if (cursorY > pageHeight - 25) {
-                doc.addPage();
-                addHeader(doc.internal.getNumberOfPages());
-                doc.setFontSize(11).setFont('times', 'normal');
-            }
-            doc.text(line, margin, cursorY);
-            cursorY += 7;
-        });
-
-        const totalPages = doc.internal.getNumberOfPages();
-        for(let i = 1; i <= totalPages; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8).setFont('helvetica', 'normal').text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
-            doc.text(`Maasim Legislative System - Official Report`, margin, pageHeight - 10);
+            if (shouldPrint) doc.autoPrint();
+            window.open(doc.output('bloburl'), '_blank');
+        } catch (e: any) {
+            console.error("PDF Generation Error:", e);
+            alert(`PDF Error: ${e.message || e}`);
         }
-
-        if (shouldPrint) doc.autoPrint();
-        window.open(doc.output('bloburl'), '_blank');
     };
 
     const handleSave = () => {

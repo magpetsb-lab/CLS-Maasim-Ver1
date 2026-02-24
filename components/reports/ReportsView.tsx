@@ -735,7 +735,10 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             } else {
                 window.open(doc.output('bloburl'), '_blank');
             }
-        } catch (e) { alert("PDF Error"); }
+        } catch (e: any) { 
+            console.error("PDF Generation Error:", e);
+            alert(`PDF Error: ${e.message || e}`); 
+        }
     };
 
     const inputClasses = "block w-full px-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm";
