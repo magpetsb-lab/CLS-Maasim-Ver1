@@ -1,0 +1,4 @@
+{
+  "ignore": ["local_database.json", "data/*", "dist/*"],
+  "ext": "js,json,ts"
+}

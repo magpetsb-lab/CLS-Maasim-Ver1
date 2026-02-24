@@ -5,6 +5,7 @@ import cors from 'cors';
 import path from 'path';
 import os from 'os';
 import dns from 'dns';
+import fs from 'fs';
 import { fileURLToPath, URL } from 'url';
 import { createRequire } from 'module';
 
@@ -33,208 +34,83 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '100mb' }));
 
 // 3. STATIC FILE SERVING
-// Serve the built frontend files from the 'dist' directory.
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// 4. CLOUD DATABASE CONNECTION
-let connectionString = process.env.DATABASE_URL;
-let poolConfig = {};
+// ==========================================
+// DATABASE ADAPTER SYSTEM
+// ==========================================
 
-if (!connectionString) {
-    console.warn('[SYSTEM] No DATABASE_URL provided. API endpoints will fail, but static frontend will serve.');
-} else if (connectionString.includes('[YOUR-PASSWORD]')) {
-    console.error('[SYSTEM] CRITICAL CONFIG ERROR: DATABASE_URL contains placeholder [YOUR-PASSWORD]. Please replace it with your actual password in Railway Variables.');
+class DbAdapter {
+    async connect() { throw new Error("Method 'connect()' must be implemented."); }
+    async healthCheck() { throw new Error("Method 'healthCheck()' must be implemented."); }
+    async getAll(storeName) { throw new Error("Method 'getAll()' must be implemented."); }
+    async put(storeName, item) { throw new Error("Method 'put()' must be implemented."); }
+    async delete(storeName, id) { throw new Error("Method 'delete()' must be implemented."); }
+    async export() { throw new Error("Method 'export()' must be implemented."); }
 }
 
-// 4.1 DNS Resolution & Provider Detection
-const prepareDatabaseConfig = async () => {
-    if (!connectionString) return;
-
-    try {
-        const dbUrl = new URL(connectionString);
-        const originalHostname = dbUrl.hostname;
-        
-        let provider = 'Generic Postgres';
-        if (originalHostname.includes('supabase')) provider = 'Supabase';
-        else if (originalHostname.includes('railway')) provider = 'Railway (Internal/Public)';
-        else if (originalHostname.includes('neon.tech')) provider = 'Neon.tech';
-        else if (originalHostname.includes('aivencloud')) provider = 'Aiven';
-        else if (originalHostname.includes('render')) provider = 'Render';
-
-        console.log(`[SYSTEM] Detected Database Provider: ${provider}`);
-
-        // IPv6/IPv4 Fix: Use dns.lookup with family: 4 to respect OS hosts and force IPv4
-        const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(originalHostname);
-        const isInternal = originalHostname.endsWith('.internal') || originalHostname === 'localhost';
-
-        if (!isIp && !isInternal) {
-            console.log(`[SYSTEM] Resolving DB Host: ${originalHostname} to IPv4...`);
-            try {
-                // dns.lookup is better than resolve4 as it uses getaddrinfo (respects /etc/hosts)
-                const { address } = await dns.promises.lookup(originalHostname, { family: 4 });
-                if (address) {
-                    console.log(`[SYSTEM] DNS Success: Mapped ${originalHostname} -> ${address}`);
-                    dbUrl.hostname = address;
-                    connectionString = dbUrl.toString();
-                    
-                    // Essential for SSL to work when connecting via IP (SNI)
-                    poolConfig.ssl = {
-                        rejectUnauthorized: false,
-                        servername: originalHostname
-                    };
-                }
-            } catch (dnsErr) {
-                console.warn('[SYSTEM] DNS Resolution failed, using original hostname:', dnsErr.message);
-                poolConfig.ssl = { rejectUnauthorized: false };
-            }
-        } else {
-             poolConfig.ssl = (process.env.NODE_ENV === 'production' || connectionString.includes('sslmode=require')) 
-                ? { rejectUnauthorized: false } 
-                : false;
-        }
-    } catch (e) {
-        console.error('[SYSTEM] URL Parsing Error:', e.message);
-        poolConfig.ssl = { rejectUnauthorized: false };
+// --- POSTGRES ADAPTER ---
+class PostgresAdapter extends DbAdapter {
+    constructor(connectionString) {
+        super();
+        this.connectionString = connectionString;
+        this.pool = null;
+        this.poolConfig = {};
     }
-};
 
-const { Pool } = pg;
-let pool = null;
-
-const initializePool = async () => {
-    await prepareDatabaseConfig();
-    
-    pool = new Pool({
-        connectionString: connectionString,
-        family: 4, 
-        max: 10,   
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-        ...poolConfig 
-    });
-
-    pool.on('error', (err) => {
-        console.error('[DB_POOL] Unexpected error on idle client:', err.message);
-    });
-};
-
-// 5. API ENDPOINTS
-app.get('/api/health', async (req, res) => {
-    try {
-        if (!process.env.DATABASE_URL) throw new Error("Server missing DATABASE_URL configuration.");
-        if (process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) throw new Error("DATABASE_URL has invalid password placeholder.");
-        if (!pool) throw new Error("Database pool initializing...");
-        
-        await pool.query('SELECT 1');
-        res.json({ 
-            status: 'ok', 
-            version: packageJson.version,
-            database: 'connected', 
-            environment: process.env.NODE_ENV || 'development'
-        });
-    } catch (err) {
-        console.error('[HEALTH] DB check failed:', err.message);
-        const isNetworkError = err.message.includes('ENETUNREACH') || err.message.includes('EAI_AGAIN') || err.message.includes('ECONNREFUSED');
-        const isStartingUp = err.message.includes('starting up') || err.code === '57P03';
-        
-        res.status(503).json({ 
-            status: 'error', 
-            reason: `DB Connection Failed: ${err.message}`, 
-            hint: isStartingUp 
-                ? 'The database is currently starting up. Please wait a moment.' 
-                : isNetworkError 
-                    ? 'Network unreachable. If using Railway, ensure Public Networking is enabled for local connections, or correct internal URL is used.' 
-                    : 'Check DATABASE_URL credentials in Railway Variables.'
-        });
-    }
-});
-
-app.get('/api/system/export', async (req, res) => {
-    try {
-        if (!pool) throw new Error("Database not connected");
-        const result = await pool.query('SELECT store_name, content FROM legislative_data');
-        const exportData = {};
-        result.rows.forEach(row => {
-            if (!exportData[row.store_name]) {
-                exportData[row.store_name] = [];
-            }
-            exportData[row.store_name].push(row.content);
-        });
-        res.json({
-            version: "1.0-CLOUD",
-            timestamp: new Date().toISOString(),
-            data: exportData
-        });
-    } catch (err) {
-        console.error('[EXPORT] Failed to create cloud backup:', err.message);
-        res.status(500).json({ error: 'Export Error', reason: err.message });
-    }
-});
-
-app.get('/api/:store', async (req, res) => {
-    try {
-        if (!pool) throw new Error("Database not connected");
-        const result = await pool.query(
-            'SELECT content FROM legislative_data WHERE store_name = $1 ORDER BY updated_at DESC', 
-            [req.params.store]
-        );
-        res.json(result.rows.map(row => row.content));
-    } catch (err) {
-        res.status(500).json({ error: 'Read Error', message: err.message });
-    }
-});
-
-app.post('/api/:store', async (req, res) => {
-    try {
-        if (!pool) throw new Error("Database not connected");
-        const { store } = req.params;
-        const content = req.body;
-        if (!content.id) return res.status(400).json({ error: 'Missing ID for record.' });
-        await pool.query(
-            `INSERT INTO legislative_data (id, store_name, content, updated_at) 
-             VALUES ($1, $2, $3, NOW())
-             ON CONFLICT (id) DO UPDATE SET content = $3, updated_at = NOW()`,
-            [content.id, store, content]
-        );
-        res.status(201).json({ success: true, id: content.id });
-    } catch (err) {
-        res.status(500).json({ error: 'Write Error', message: err.message });
-    }
-});
-
-app.delete('/api/:store/:id', async (req, res) => {
-    try {
-        if (!pool) throw new Error("Database not connected");
-        await pool.query('DELETE FROM legislative_data WHERE id = $1', [req.params.id]);
-        res.status(200).json({ success: true, id: req.params.id });
-    } catch (err) {
-        res.status(500).json({ error: 'Delete Error', message: err.message });
-    }
-});
-
-// 6. SPA ROUTING FALLBACK
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
-// 7. EXPORT & SERVER STARTUP
-export default app;
-
-async function initDbWithRetry(retries = 5, delay = 2000) {
-    if (!pool) return { ok: false, error: "Pool not ready" };
-    
-    for (let i = 0; i < retries; i++) {
-        let client;
+    async prepareConfig() {
         try {
-            client = await pool.connect();
+            const dbUrl = new URL(this.connectionString);
+            const originalHostname = dbUrl.hostname;
             
-            // Fix for Railway 'pg_stat_statements' error in logs
+            // IPv6/IPv4 Fix
+            const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(originalHostname);
+            const isInternal = originalHostname.endsWith('.internal') || originalHostname === 'localhost';
+
+            if (!isIp && !isInternal) {
+                try {
+                    const { address } = await dns.promises.lookup(originalHostname, { family: 4 });
+                    if (address) {
+                        dbUrl.hostname = address;
+                        this.connectionString = dbUrl.toString();
+                        this.poolConfig.ssl = { rejectUnauthorized: false, servername: originalHostname };
+                    }
+                } catch (dnsErr) {
+                    console.warn('[DB] DNS Resolution failed, using original hostname:', dnsErr.message);
+                    this.poolConfig.ssl = { rejectUnauthorized: false };
+                }
+            } else {
+                 this.poolConfig.ssl = (process.env.NODE_ENV === 'production' || this.connectionString.includes('sslmode=require')) 
+                    ? { rejectUnauthorized: false } 
+                    : false;
+            }
+        } catch (e) {
+            console.error('[DB] Config Error:', e.message);
+            this.poolConfig.ssl = { rejectUnauthorized: false };
+        }
+    }
+
+    async connect() {
+        await this.prepareConfig();
+        const { Pool } = pg;
+        this.pool = new Pool({
+            connectionString: this.connectionString,
+            family: 4,
+            max: 10,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 10000,
+            ...this.poolConfig
+        });
+        
+        this.pool.on('error', (err) => console.error('[DB] Pool Error:', err.message));
+        
+        // Init Schema
+        try {
+            const client = await this.pool.connect();
             try {
                 await client.query('CREATE EXTENSION IF NOT EXISTS pg_stat_statements;');
-            } catch (extError) {
-                console.warn('[DB] Could not enable pg_stat_statements (harmless for app, but Railway metrics might fail):', extError.message);
-            }
-
+            } catch (e) {} // Ignore
+            
             await client.query(`
                 CREATE TABLE IF NOT EXISTS legislative_data (
                     id TEXT PRIMARY KEY,
@@ -245,56 +121,233 @@ async function initDbWithRetry(retries = 5, delay = 2000) {
                 CREATE INDEX IF NOT EXISTS idx_store_name ON legislative_data(store_name);
             `);
             client.release();
-            return { ok: true };
+            console.log('[DB] Postgres Connected & Schema Verified');
+            return true;
         } catch (err) {
-            if (client) client.release();
-            console.log(`[DB] Connection attempt ${i + 1}/${retries} failed: ${err.message}`);
-            if (i < retries - 1) {
-                console.log(`[DB] Retrying in ${delay/1000}s...`);
-                await new Promise(res => setTimeout(res, delay));
-            } else {
-                return { ok: false, error: err.message };
-            }
+            console.error('[DB] Connection Failed:', err.message);
+            return false;
         }
+    }
+
+    async healthCheck() {
+        if (!this.pool) throw new Error("Pool not initialized");
+        await this.pool.query('SELECT 1');
+        return { status: 'connected', type: 'postgres' };
+    }
+
+    async getAll(storeName) {
+        const res = await this.pool.query(
+            'SELECT content FROM legislative_data WHERE store_name = $1 ORDER BY updated_at DESC', 
+            [storeName]
+        );
+        return res.rows.map(r => r.content);
+    }
+
+    async put(storeName, item) {
+        if (!item.id) throw new Error("Item missing ID");
+        await this.pool.query(
+            `INSERT INTO legislative_data (id, store_name, content, updated_at) 
+             VALUES ($1, $2, $3, NOW())
+             ON CONFLICT (id) DO UPDATE SET content = $3, updated_at = NOW()`,
+            [item.id, storeName, item]
+        );
+        return item.id;
+    }
+
+    async delete(storeName, id) {
+        await this.pool.query('DELETE FROM legislative_data WHERE id = $1', [id]);
+        return id;
+    }
+
+    async export() {
+        const result = await this.pool.query('SELECT store_name, content FROM legislative_data');
+        const exportData = {};
+        result.rows.forEach(row => {
+            if (!exportData[row.store_name]) exportData[row.store_name] = [];
+            exportData[row.store_name].push(row.content);
+        });
+        return exportData;
     }
 }
 
+// --- LOCAL FILE ADAPTER ---
+class LocalFileAdapter extends DbAdapter {
+    constructor(filePath) {
+        super();
+        this.filePath = filePath;
+        this.data = {};
+        this.isDirty = false;
+        this.saveInterval = null;
+    }
+
+    async connect() {
+        try {
+            if (fs.existsSync(this.filePath)) {
+                const fileContent = fs.readFileSync(this.filePath, 'utf-8');
+                this.data = JSON.parse(fileContent);
+            } else {
+                this.data = {};
+                this._save();
+            }
+            console.log(`[DB] Local File DB initialized at: ${this.filePath}`);
+            
+            // Auto-save every 5 seconds if dirty
+            this.saveInterval = setInterval(() => {
+                if (this.isDirty) this._save();
+            }, 5000);
+            
+            return true;
+        } catch (err) {
+            console.error('[DB] Local File Init Error:', err);
+            return false;
+        }
+    }
+
+    _save() {
+        try {
+            fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+            this.isDirty = false;
+        } catch (err) {
+            console.error('[DB] Save Error:', err);
+        }
+    }
+
+    async healthCheck() {
+        return { status: 'connected', type: 'local-file', path: this.filePath };
+    }
+
+    async getAll(storeName) {
+        const store = this.data[storeName] || {};
+        // Convert map to array and sort by updated_at (simulated)
+        // Since we don't strictly track updated_at in the map unless inside content, 
+        // we'll assume content has what we need or just return values.
+        // The frontend sorts anyway.
+        return Object.values(store);
+    }
+
+    async put(storeName, item) {
+        if (!item.id) throw new Error("Item missing ID");
+        if (!this.data[storeName]) this.data[storeName] = {};
+        
+        this.data[storeName][item.id] = item;
+        this.isDirty = true;
+        this._save(); // Immediate save for safety in this version
+        return item.id;
+    }
+
+    async delete(storeName, id) {
+        if (this.data[storeName] && this.data[storeName][id]) {
+            delete this.data[storeName][id];
+            this.isDirty = true;
+            this._save();
+        }
+        return id;
+    }
+
+    async export() {
+        const exportData = {};
+        for (const [storeName, storeMap] of Object.entries(this.data)) {
+            exportData[storeName] = Object.values(storeMap);
+        }
+        return exportData;
+    }
+}
+
+// ==========================================
+// INITIALIZATION
+// ==========================================
+
+let db;
+
+const initDatabase = async () => {
+    if (process.env.DATABASE_URL) {
+        console.log('[SYSTEM] DATABASE_URL detected. Using Postgres Adapter.');
+        db = new PostgresAdapter(process.env.DATABASE_URL);
+    } else {
+        console.log('[SYSTEM] No DATABASE_URL. Using Local File Adapter.');
+        db = new LocalFileAdapter(path.join(__dirname, 'local_database.json'));
+    }
+    await db.connect();
+};
+
+// ==========================================
+// API ENDPOINTS
+// ==========================================
+
+app.get('/api/health', async (req, res) => {
+    try {
+        if (!db) throw new Error("DB initializing...");
+        const status = await db.healthCheck();
+        res.json({ 
+            status: 'ok', 
+            version: packageJson.version,
+            database: status,
+            environment: process.env.NODE_ENV || 'development'
+        });
+    } catch (err) {
+        res.status(503).json({ status: 'error', reason: err.message });
+    }
+});
+
+app.get('/api/system/export', async (req, res) => {
+    try {
+        const data = await db.export();
+        res.json({
+            version: "1.0-EXPORT",
+            timestamp: new Date().toISOString(),
+            data: data
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Export Error', reason: err.message });
+    }
+});
+
+app.get('/api/:store', async (req, res) => {
+    try {
+        const data = await db.getAll(req.params.store);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: 'Read Error', message: err.message });
+    }
+});
+
+app.post('/api/:store', async (req, res) => {
+    try {
+        const { store } = req.params;
+        const content = req.body;
+        const id = await db.put(store, content);
+        res.status(201).json({ success: true, id });
+    } catch (err) {
+        res.status(500).json({ error: 'Write Error', message: err.message });
+    }
+});
+
+app.delete('/api/:store/:id', async (req, res) => {
+    try {
+        await db.delete(req.params.store, req.params.id);
+        res.status(200).json({ success: true, id: req.params.id });
+    } catch (err) {
+        res.status(500).json({ error: 'Delete Error', message: err.message });
+    }
+});
+
+// SPA FALLBACK
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// STARTUP
 if (process.argv[1] === __filename) {
     const startServer = async () => {
-        await initializePool();
+        await initDatabase();
         
-        app.listen(PORT, '0.0.0.0', async () => {
-            console.clear();
-            console.log(`\x1b[34m╔══════════════════════════════════════════════════════════════╗\x1b[0m`);
-            console.log(`\x1b[34m║          LEGISLATIVE DATA BRIDGE SERVER IS RUNNING           ║\x1b[0m`);
-            console.log(`\x1b[34m╚══════════════════════════════════════════════════════════════╝\x1b[0m`);
-            
-            console.log(`\x1b[36m[SYSTEM]\x1b[0m Version: ${packageJson.version}`);
-            console.log(`\x1b[36m[SYSTEM]\x1b[0m Server listening on port: ${PORT}`);
-
-            if (pool) {
-                const dbStatus = await initDbWithRetry();
-                if (dbStatus.ok) {
-                    console.log(`\x1b[32m[SUCCESS]\x1b[0m Database Linked: ONLINE`);
-                } else {
-                    console.log(`\x1b[31m[ERROR]\x1b[0m Database Error: ${dbStatus.error}`);
-                    console.log(`\x1b[33m[WARNING]\x1b[0m App running in OFFLINE mode (Serverless Static)`);
-                }
-            } else {
-                 console.log(`\x1b[33m[WARNING]\x1b[0m Database pool failed to initialize (Missing Config).`);
-            }
-            
-            console.log(`\nLocal URL: http://localhost:${PORT}`);
-            const networkInterfaces = os.networkInterfaces();
-            Object.keys(networkInterfaces).forEach((ifName) => {
-                (networkInterfaces[ifName] || []).forEach((iface) => {
-                    if (iface.family === 'IPv4' && !iface.internal) {
-                        console.log(`Network URL: http://${iface.address}:${PORT}`);
-                    }
-                });
-            });
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`\n[SYSTEM] Server running on port ${PORT}`);
+            console.log(`[SYSTEM] Mode: ${process.env.DATABASE_URL ? 'CLOUD (Postgres)' : 'LOCAL (File DB)'}`);
+            console.log(`[SYSTEM] Local URL: http://localhost:${PORT}`);
         });
     };
-
     startServer();
 }
+
+export default app;
