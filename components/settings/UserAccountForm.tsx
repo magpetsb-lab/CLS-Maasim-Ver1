@@ -102,6 +102,7 @@ const UserAccountForm: React.FC<UserAccountFormProps> = ({ initialData, onSubmit
                         <select id="role" name="role" value={formData.role} onChange={handleChange} className={inputClasses}>
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
+                            <option value="developer">Developer</option>
                         </select>
                     </div>
                     <div>

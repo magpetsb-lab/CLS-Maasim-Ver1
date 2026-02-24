@@ -71,7 +71,7 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
     const [selectedLegislator, setSelectedLegislator] = useState<Legislator | null>(null);
     const [activeTab, setActiveTab] = useState<SettingsTab>('profiles');
 
-    const canDelete = props.currentUserRole === 'admin';
+    const canDelete = props.currentUserRole === 'admin' || props.currentUserRole === 'developer';
 
     const handleAddNew = () => {
         setSelectedLegislator(null);
@@ -237,6 +237,7 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
                         <DatabaseManagementView 
                             onDatabaseAction={props.onDatabaseRefresh} 
                             onPermissionChange={props.onPermissionChange}
+                            currentUserRole={props.currentUserRole}
                         />
                     )}
                 </div>

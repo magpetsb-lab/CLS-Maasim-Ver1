@@ -93,6 +93,18 @@ export class LegislativeDB {
         return localStorage.getItem('auto_backup_time');
     }
 
+    public setAutoBackupPath(path: string | null) {
+        if (path) {
+            localStorage.setItem('auto_backup_path', path);
+        } else {
+            localStorage.removeItem('auto_backup_path');
+        }
+    }
+
+    public getAutoBackupPath(): string | null {
+        return localStorage.getItem('auto_backup_path');
+    }
+
     private startAutoBackupScheduler() {
         if (this.autoBackupInterval) clearInterval(this.autoBackupInterval);
         // Check every minute
@@ -119,8 +131,23 @@ export class LegislativeDB {
     }
 
     private async triggerAutoDownload() {
-         const json = await this.exportLocalDatabase();
-         const blob = new Blob([json], { type: 'application/json' });
+         const jsonString = await this.exportLocalDatabase();
+         const backupPath = this.getAutoBackupPath();
+
+         if (backupPath && this.status.connection === 'connected') {
+             try {
+                 await this.apiRequest('/api/system/backup', 'POST', {
+                     path: backupPath,
+                     data: JSON.parse(jsonString)
+                 });
+                 console.log('[DB] Auto-backup saved to server path: ' + backupPath);
+                 return; 
+             } catch (e) {
+                 console.error('[DB] Server backup failed, falling back to download.', e);
+             }
+         }
+
+         const blob = new Blob([jsonString], { type: 'application/json' });
          const url = URL.createObjectURL(blob);
          const a = document.createElement('a');
          a.href = url;

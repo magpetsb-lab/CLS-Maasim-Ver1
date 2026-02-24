@@ -15,7 +15,7 @@ interface UserAccountViewProps {
 const UserAccountView: React.FC<UserAccountViewProps> = (props) => {
     const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
     const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
-    const isAdmin = props.currentUserRole === 'admin';
+    const isAdmin = props.currentUserRole === 'admin' || props.currentUserRole === 'developer';
 
     const handleAddNew = () => {
         if (!isAdmin) return;

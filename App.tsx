@@ -149,7 +149,7 @@ const App: React.FC = () => {
   };
 
 
-  const canDelete = currentUser?.role === 'admin';
+  const canDelete = currentUser?.role === 'admin' || currentUser?.role === 'developer';
 
   const handleAddResolution = async (res: Omit<Resolution, 'id'>) => {
     const newRes: Resolution = { ...res, id: `res-${Date.now()}` };

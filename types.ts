@@ -202,7 +202,7 @@ export interface DocumentStatus {
   name: string;
 }
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'user' | 'developer';
 
 export interface UserAccount {
   id: string;

@@ -373,6 +373,35 @@ app.post('/api/system/seed', async (req, res) => {
     }
 });
 
+app.post('/api/system/backup', ensureDb, async (req, res) => {
+    try {
+        const { path: backupPath, data } = req.body;
+        if (!backupPath || !data) {
+            return res.status(400).json({ error: 'Missing path or data' });
+        }
+
+        // Ensure directory exists
+        if (!fs.existsSync(backupPath)) {
+             try {
+                fs.mkdirSync(backupPath, { recursive: true });
+             } catch (e) {
+                 return res.status(500).json({ error: 'Invalid Path', message: 'Could not create directory: ' + e.message });
+             }
+        }
+
+        const fileName = `cls_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        const fullPath = path.join(backupPath, fileName);
+
+        fs.writeFileSync(fullPath, JSON.stringify(data, null, 2));
+        console.log(`[BACKUP] Saved to ${fullPath}`);
+
+        res.json({ success: true, path: fullPath });
+    } catch (err) {
+        console.error('[BACKUP] Error:', err);
+        res.status(500).json({ error: 'Backup Failed', message: err.message });
+    }
+});
+
 app.get('/api/health', ensureDb, async (req, res) => {
     try {
         const status = await db.healthCheck();

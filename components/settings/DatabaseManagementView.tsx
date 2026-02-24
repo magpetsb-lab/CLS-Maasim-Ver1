@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { dbService, SyncStatus } from '../../services/db';
+import { UserRole } from '../../types';
 
 interface DatabaseManagementViewProps {
     onDatabaseAction: () => void;
     onPermissionChange?: () => void;
+    currentUserRole?: UserRole;
 }
 
 interface PermissionStatus {
@@ -14,7 +16,7 @@ interface PermissionStatus {
     notifications: PermissionState | 'unknown';
 }
 
-const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatabaseAction, onPermissionChange }) => {
+const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatabaseAction, onPermissionChange, currentUserRole }) => {
     const [serverUrl, setServerUrl] = useState(dbService.getServerUrl() || '');
     const [connectionStatus, setConnectionStatus] = useState<'IDLE' | 'TESTING' | 'CONNECTED' | 'FAILED'>('IDLE');
     const [diagnosticLog, setDiagnosticLog] = useState<string[]>([]);
@@ -26,8 +28,11 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
     });
     const [isDownloading, setIsDownloading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const [isRestoring, setIsRestoring] = useState(false);
     const [queueSize, setQueueSize] = useState(0);
     const [autoBackupTime, setAutoBackupTime] = useState<string>('');
+    const [autoBackupPath, setAutoBackupPath] = useState<string>('');
+    const [restoreFile, setRestoreFile] = useState<File | null>(null);
     
     // Check if API Key is injected by Vite during build
     const hasApiKey = !!process.env.API_KEY;
@@ -72,6 +77,9 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
         const savedTime = dbService.getAutoBackupTime();
         if (savedTime) setAutoBackupTime(savedTime);
 
+        const savedPath = dbService.getAutoBackupPath();
+        if (savedPath) setAutoBackupPath(savedPath);
+
         updatePermissionStatuses();
         
         return () => dbService.unsubscribe(handleStatusUpdate);
@@ -79,7 +87,8 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
 
     const handleSaveAutoBackup = () => {
         dbService.setAutoBackupTime(autoBackupTime || null);
-        addLog(`SUCCESS: Auto-backup time set to ${autoBackupTime || 'Disabled'}`);
+        dbService.setAutoBackupPath(autoBackupPath || null);
+        addLog(`SUCCESS: Auto-backup configured. Time: ${autoBackupTime || 'Disabled'}, Path: ${autoBackupPath || 'Default (Download)'}`);
         alert('Auto-backup configuration saved.');
     };
 
@@ -175,6 +184,46 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                 setIsResetting(false);
             }
         }
+    };
+
+    const handleRestoreDatabase = async () => {
+        if (!restoreFile) {
+            alert('Please select a backup file to restore.');
+            return;
+        }
+
+        // Developer Role Bypass or Password Check
+        if (currentUserRole !== 'developer') {
+            const password = prompt("ENTER SYSTEM DEVELOPER PASSWORD to authorize database restoration:");
+            if (password !== "dev_admin_2024") { // Hardcoded developer password
+                alert("Incorrect Developer Password. Access Denied.");
+                return;
+            }
+        }
+
+        if (!window.confirm("CRITICAL WARNING:\n\nThis will OVERWRITE all current data with the contents of the backup file. This action cannot be undone.\n\nAre you sure you want to proceed?")) {
+            return;
+        }
+
+        setIsRestoring(true);
+        addLog('Starting database restoration...');
+        
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const json = e.target?.result as string;
+                await dbService.restoreFullBackup(json);
+                addLog('SUCCESS: Database restored from backup.');
+                alert('Database restoration successful. The page will now reload.');
+                window.location.reload();
+            } catch (error: any) {
+                addLog(`ERROR: Restoration failed: ${error.message}`);
+                alert(`Restoration failed: ${error.message}`);
+            } finally {
+                setIsRestoring(false);
+            }
+        };
+        reader.readAsText(restoreFile);
     };
 
     return (
@@ -281,11 +330,40 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-sm focus:border-indigo-500 outline-none shadow-inner" 
                                 />
                             </div>
+                            <div className="flex-grow w-full sm:w-[50%]">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Backup Location (Server Path)</label>
+                                <input 
+                                    type="text" 
+                                    value={autoBackupPath} 
+                                    onChange={(e) => setAutoBackupPath(e.target.value)} 
+                                    placeholder="e.g., C:\Backups or /home/user/backups"
+                                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-sm focus:border-indigo-500 outline-none shadow-inner" 
+                                />
+                            </div>
                             <button onClick={handleSaveAutoBackup} className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-indigo-700 transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit">Save Configuration</button>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-4 italic">
-                            Note: The application must be open in your browser at the scheduled time for the backup to trigger.
+                            Note: The application must be open in your browser at the scheduled time. If a path is set, backups are saved to the server's file system. Otherwise, they are downloaded to your browser.
                         </p>
+                    </div>
+
+                    <div className="bg-white border-2 border-amber-200 rounded-[2.5rem] p-8 shadow-sm">
+                        <h4 className="font-black text-amber-900 uppercase tracking-tight text-base mb-2">Restore Database</h4>
+                        <p className="text-sm text-amber-800 mb-6">Restore the database from a backup file. Requires Developer authorization.</p>
+                        <div className="flex flex-col sm:flex-row gap-4 items-end">
+                            <div className="flex-grow w-full sm:w-auto">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Select Backup File (.json)</label>
+                                <input 
+                                    type="file" 
+                                    accept=".json"
+                                    onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
+                                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-sm focus:border-amber-500 outline-none shadow-inner bg-slate-50" 
+                                />
+                            </div>
+                            <button onClick={handleRestoreDatabase} disabled={isRestoring || !restoreFile} className="bg-amber-600 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-amber-700 transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit disabled:opacity-50 disabled:cursor-not-allowed">
+                                {isRestoring ? 'Restoring...' : 'Restore Database'}
+                            </button>
+                        </div>
                     </div>
                 </>
             )}
