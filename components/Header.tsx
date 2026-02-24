@@ -128,7 +128,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
                 </div>
                 <div className="flex flex-col">
                     <h2 className="text-sm font-black text-blue-300 uppercase tracking-[0.3em] mb-1">
-                        Municipality of Maasim
+                        Municipality of Maasim, Province of Saranggani
                     </h2>
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tighter italic uppercase leading-none text-white drop-shadow-lg">
                         Computerized Legislative Tracking System
