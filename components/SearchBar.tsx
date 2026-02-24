@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 
 interface SearchBarProps {
   query: string;
@@ -8,21 +8,20 @@ interface SearchBarProps {
   suggestions?: string[];
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ query, onQueryChange, placeholder, suggestions = [] }) => {
+const DEFAULT_SUGGESTIONS: string[] = [];
+
+const SearchBar: React.FC<SearchBarProps> = ({ query, onQueryChange, placeholder, suggestions = DEFAULT_SUGGESTIONS }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const filteredSuggestions = useMemo(() => {
     if (query && suggestions.length > 0) {
       const lowerQuery = query.toLowerCase();
-      const matches = suggestions
+      return suggestions
         .filter(s => s && s.toLowerCase().includes(lowerQuery) && s.toLowerCase() !== lowerQuery)
         .slice(0, 8); // Limit to top 8 suggestions
-      setFilteredSuggestions(matches);
-    } else {
-      setFilteredSuggestions([]);
     }
+    return DEFAULT_SUGGESTIONS;
   }, [query, suggestions]);
 
   const handleFocus = () => {
