@@ -178,6 +178,8 @@ export interface Legislator {
   dateOfBirth: string;
   positions: Position[];
   profileImageUrl?: string;
+  mobileNumber?: string;
+  email?: string;
 }
 
 export interface CommitteeMembership {

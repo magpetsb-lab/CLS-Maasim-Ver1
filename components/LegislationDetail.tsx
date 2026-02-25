@@ -14,6 +14,8 @@ const getInitialFormData = (): Omit<Legislator, 'id'> => ({
     dateOfBirth: '',
     positions: [],
     profileImageUrl: undefined,
+    mobileNumber: '',
+    email: '',
 });
 
 const getInitialPositionData = () => ({
@@ -131,6 +133,14 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
                     <div>
                         <label htmlFor="dateOfBirth" className={labelClasses}>Date of Birth</label>
                         <input type="date" id="dateOfBirth" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} className={inputClasses} />
+                    </div>
+                    <div>
+                        <label htmlFor="mobileNumber" className={labelClasses}>Mobile Number</label>
+                        <input type="tel" id="mobileNumber" name="mobileNumber" value={formData.mobileNumber || ''} onChange={handleChange} className={inputClasses} placeholder="09xxxxxxxxx" pattern="[0-9]{11}" />
+                    </div>
+                    <div>
+                        <label htmlFor="email" className={labelClasses}>Email Address</label>
+                        <input type="email" id="email" name="email" value={formData.email || ''} onChange={handleChange} className={inputClasses} placeholder="email@example.com" />
                     </div>
                 </div>
                 
