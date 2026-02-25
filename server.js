@@ -196,18 +196,25 @@ class LocalFileAdapter extends DbAdapter {
             }
 
             // Ensure structure exists
-            if (!this.data.users) this.data.users = {};
+            if (!this.data.userAccounts) this.data.userAccounts = {};
             if (!this.data.resolutions) this.data.resolutions = {};
             if (!this.data.ordinances) this.data.ordinances = {};
-            if (!this.data.session_minutes) this.data.session_minutes = {};
-            if (!this.data.committee_reports) this.data.committee_reports = {};
+            if (!this.data.sessionMinutes) this.data.sessionMinutes = {};
+            if (!this.data.committeeReports) this.data.committeeReports = {};
             if (!this.data.legislators) this.data.legislators = {};
-            if (!this.data.incoming_documents) this.data.incoming_documents = {};
+            if (!this.data.incomingDocuments) this.data.incomingDocuments = {};
+            if (!this.data.sessionAgendas) this.data.sessionAgendas = {};
+            if (!this.data.committeeMemberships) this.data.committeeMemberships = {};
+            if (!this.data.terms) this.data.terms = {};
+            if (!this.data.sectors) this.data.sectors = {};
+            if (!this.data.legislativeMeasures) this.data.legislativeMeasures = {};
+            if (!this.data.documentTypes) this.data.documentTypes = {};
+            if (!this.data.documentStatuses) this.data.documentStatuses = {};
 
             // Seed Users if empty
-            if (Object.keys(this.data.users).length === 0) {
+            if (Object.keys(this.data.userAccounts).length === 0) {
                 console.log('[DB] Seeding default users...');
-                this.data.users = {
+                this.data.userAccounts = {
                     'user-001': {
                         id: 'user-001',
                         userId: 'admin',
