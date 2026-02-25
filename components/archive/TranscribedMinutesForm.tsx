@@ -156,8 +156,9 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
 
     const getBase64Logo = async (): Promise<string | null> => {
         try {
-            const response = await fetch('./maasim-logo.png');
-            if (response.ok) {
+            const response = await fetch('/maasim-logo.png');
+            const contentType = response.headers.get('content-type');
+            if (response.ok && contentType && contentType.startsWith('image/')) {
                 const blob = await response.blob();
                 return await new Promise((resolve) => {
                     const reader = new FileReader();
@@ -181,7 +182,11 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
 
             const addHeader = (pageNum: number) => {
                 if (logoData) {
-                    doc.addImage(logoData, 'PNG', margin, 12, 22, 22);
+                    try {
+                        doc.addImage(logoData, 'PNG', margin, 12, 22, 22);
+                    } catch (imgErr) {
+                        console.warn("Failed to add logo to PDF:", imgErr);
+                    }
                 }
                 
                 doc.setFontSize(10).setFont('helvetica', 'bold').text("MUNICIPALITY OF MAASIM", pageWidth/2 + 12, 16, { align: 'center' });

@@ -397,7 +397,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
         for (const url of candidates) {
             try {
                 const response = await fetch(url);
-                if (response.ok) {
+                const contentType = response.headers.get('content-type');
+                if (response.ok && contentType && contentType.startsWith('image/')) {
                     const blob = await response.blob();
                     return await new Promise((resolve) => {
                         const reader = new FileReader();
@@ -676,7 +677,11 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pageHeight, pageWidth] });
             
             if (logoData) {
-                doc.addImage(logoData, 'PNG', centerX - 62, 4, 20, 20);
+                try {
+                    doc.addImage(logoData, 'PNG', centerX - 62, 4, 20, 20);
+                } catch (imgErr) {
+                    console.warn("Failed to add logo to PDF:", imgErr);
+                }
             }
             
             doc.setFontSize(13).setFont(undefined, 'bold').text("OFFICE OF THE SANGGUNIANG BAYAN", centerX + 12, 12, { align: 'center' });
