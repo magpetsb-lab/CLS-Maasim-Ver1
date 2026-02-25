@@ -9,8 +9,6 @@ import fs from 'fs';
 import { fileURLToPath, URL } from 'url';
 import { createRequire } from 'module';
 
-import { createServer as createViteServer } from 'vite';
-
 // Polyfills for ESM
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -35,7 +33,8 @@ app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '100mb' }));
 
-// 3. STATIC FILE SERVING (Handled in startServer based on env)
+// 3. STATIC FILE SERVING
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // ==========================================
 // DATABASE ADAPTER SYSTEM
@@ -481,30 +480,16 @@ app.delete('/api/:store/:id', ensureDb, async (req, res) => {
     }
 });
 
+// SPA FALLBACK
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 // STARTUP
 if (process.argv[1] === __filename) {
     const startServer = async () => {
-        // Vite Middleware Integration
-        if (process.env.NODE_ENV !== 'production') {
-            try {
-                const vite = await createViteServer({
-                    server: { middlewareMode: true },
-                    appType: 'spa',
-                });
-                app.use(vite.middlewares);
-                console.log('[SYSTEM] Vite middleware initialized');
-            } catch (e) {
-                console.error('[SYSTEM] Failed to start Vite middleware:', e);
-                process.exit(1);
-            }
-        } else {
-            // Production Static Serving
-            app.use(express.static(path.join(__dirname, 'dist')));
-            app.get('*', (req, res) => {
-                res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-            });
-        }
-
+        // DB init is already started above
+        
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`\n[SYSTEM] Server running on port ${PORT}`);
             console.log(`[SYSTEM] Mode: ${process.env.DATABASE_URL ? 'CLOUD (Postgres)' : 'LOCAL (File DB)'}`);
