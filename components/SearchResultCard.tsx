@@ -32,27 +32,27 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({ result }) => {
             <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-4 mb-2">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${typeColor}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${typeColor}`}>
                             {result.type}
                         </span>
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-800">
+                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-800">
                            {result.type === 'Resolution' ? 'Res. No:' : 'Ord. No:'} {result.number}
                         </span>
                     </div>
-                    <h3 className="text-lg font-bold text-brand-primary">{result.title}</h3>
+                    <h3 className="text-base font-bold text-brand-primary">{result.title}</h3>
                 </div>
                 <div className="flex-shrink-0 mt-2 sm:mt-0 flex items-center flex-wrap justify-end gap-2">
-                     <p className="text-sm text-slate-500 whitespace-nowrap mr-2">Approved: {result.date}</p>
+                     <p className="text-xs text-slate-500 whitespace-nowrap mr-2">Approved: {result.date}</p>
                      {result.filePath && (
                         <>
                             <a
                                 href={result.filePath}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-3 py-1 text-sm font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
+                                className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
                                 aria-label="View attached file"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                                     <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                                 </svg>
@@ -60,11 +60,11 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({ result }) => {
                             </a>
                             <button
                                 onClick={handlePrint}
-                                className="px-3 py-1 text-sm font-medium text-brand-secondary bg-blue-100 rounded-md hover:bg-blue-200 transition-colors inline-flex items-center"
+                                className="px-2 py-0.5 text-xs font-medium text-brand-secondary bg-blue-100 rounded-md hover:bg-blue-200 transition-colors inline-flex items-center"
                                 aria-label="Print attached file (opens in new tab)"
                                 title="Print attached file (opens in new tab)"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M5 4v3h10V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm10 5H5a2 2 0 00-2 2v3a2 2 0 002 2h1v-2a1 1 0 011-1h6a1 1 0 011 1v2h1a2 2 0 002-2v-3a2 2 0 00-2-2zm-3 4H8v2h4v-2z" clipRule="evenodd" />
                                 </svg>
                                 Print File
