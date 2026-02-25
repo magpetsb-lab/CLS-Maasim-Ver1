@@ -29,11 +29,16 @@ const getInitialFormData = (): Omit<IncomingDocument, 'id'> => ({
     urgentMattersDate: '',
     unfinishedBusinessDate: '',
     unassignedBusinessDate: '',
+    agendaItemNumber: '',
     
     firstReadingDate: '',
     firstReadingRemarks: '',
     concernedCommittee: '',
     committeeReferralChairman: '',
+
+    // Committee Report
+    committeeReportNumber: '',
+    committeeReportDate: '',
 
     secondReadingDate: '',
     secondReadingRemarks: '',
@@ -46,6 +51,16 @@ const getInitialFormData = (): Omit<IncomingDocument, 'id'> => ({
     outputNumber: '',
     sponsor: '',
     seconder: '',
+
+    // Executive Action (Mayor)
+    dateTransmittedToMayor: '',
+    dateApprovedByMayor: '',
+    dateVetoedByMayor: '',
+
+    // Provincial Review (Sangguniang Panlalawigan)
+    dateTransmittedToSP: '',
+    spResolutionNumber: '',
+    dateReceivedFromSP: '',
 
     // Records Management
     datePosted: '',
@@ -698,6 +713,132 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
         handlePrintContent(title, draftResolutionContent, action);
     };
 
+    const handlePrintTrackingSlip = async () => {
+        if (!(window as any).jspdf) return alert("PDF library not loaded.");
+        
+        try {
+            const { jsPDF } = (window as any).jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const logoData = await getBase64Logo();
+            const pageWidth = 210;
+            const margin = 15;
+            
+            // Header
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', margin, 10, 20, 20);
+            }
+            doc.setFontSize(10).setFont('helvetica', 'bold').text("Republic of the Philippines", pageWidth/2, 15, { align: 'center' });
+            doc.setFontSize(10).text("Province of Sarangani", pageWidth/2, 20, { align: 'center' });
+            doc.setFontSize(12).text("MUNICIPALITY OF MAASIM", pageWidth/2, 25, { align: 'center' });
+            doc.setFontSize(11).text("OFFICE OF THE SANGGUNIANG BAYAN", pageWidth/2, 30, { align: 'center' });
+            
+            doc.setLineWidth(0.5).line(margin, 35, pageWidth - margin, 35);
+            
+            doc.setFontSize(14).text("LEGISLATIVE DOCUMENT TRACKING SLIP", pageWidth/2, 45, { align: 'center' });
+            
+            // Document Info
+            let y = 55;
+            doc.setFontSize(10).setFont('helvetica', 'bold');
+            doc.text(`Reference No.: ${formData.referenceNumber || 'N/A'}`, margin, y);
+            doc.text(`Date Received: ${formData.dateReceived || 'N/A'} ${formData.timeReceived || ''}`, pageWidth - margin, y, { align: 'right' });
+            
+            y += 6;
+            doc.text(`Sender:`, margin, y);
+            doc.setFont('helvetica', 'normal').text(formData.sender || 'N/A', margin + 25, y);
+            
+            y += 6;
+            doc.setFont('helvetica', 'bold').text(`Type:`, margin, y);
+            doc.setFont('helvetica', 'normal').text(formData.type || 'N/A', margin + 25, y);
+            
+            if (formData.category) {
+                doc.setFont('helvetica', 'bold').text(`Category:`, pageWidth/2, y);
+                doc.setFont('helvetica', 'normal').text(formData.category, pageWidth/2 + 25, y);
+            }
+
+            y += 6;
+            doc.setFont('helvetica', 'bold').text(`Subject:`, margin, y);
+            const subjectLines = doc.splitTextToSize(formData.subject || 'N/A', pageWidth - margin - 30);
+            doc.setFont('helvetica', 'normal').text(subjectLines, margin + 25, y);
+            y += (subjectLines.length * 5) + 5;
+
+            // Tracking Table
+            const columns = ["Stage / Activity", "Date / Details", "Remarks / Status"];
+            const rows = [
+                ["Receipt", `${formData.dateReceived} ${formData.timeReceived}`, "Received by Office"],
+                ["Calendar of Business", 
+                 `Urgent: ${formData.urgentMattersDate || '-'}\nUnfinished: ${formData.unfinishedBusinessDate || '-'}\nUnassigned: ${formData.unassignedBusinessDate || '-'}`, 
+                 `Agenda Item No.: ${formData.agendaItemNumber || '-'}`],
+                ["First Reading", `${formData.firstReadingDate || '-'}`, `Ref to: ${formData.concernedCommittee || '-'}\nChair: ${formData.committeeReferralChairman || '-'}\nRemarks: ${formData.firstReadingRemarks || '-'}`],
+                ["Committee Report", `Date: ${formData.committeeReportDate || '-'}`, `Report No.: ${formData.committeeReportNumber || '-'}`],
+                ["Second Reading", `${formData.secondReadingDate || '-'}`, `${formData.secondReadingRemarks || '-'}`],
+                ["Third Reading", `${formData.thirdReadingDate || '-'}`, `${formData.thirdReadingRemarks || '-'}`],
+                ["Legislative Output", 
+                 `${formData.outputType || '-'}\nNo.: ${formData.outputNumber || '-'}`, 
+                 `Sponsor: ${formData.sponsor || '-'}\nSeconder: ${formData.seconder || '-'}`],
+                ["Executive Action", 
+                 `Transmitted: ${formData.dateTransmittedToMayor || '-'}\nApproved: ${formData.dateApprovedByMayor || '-'}\nVetoed: ${formData.dateVetoedByMayor || '-'}`, 
+                 "-"],
+                ["Provincial Review", 
+                 `Transmitted: ${formData.dateTransmittedToSP || '-'}\nReceived: ${formData.dateReceivedFromSP || '-'}`, 
+                 `SP Res No.: ${formData.spResolutionNumber || '-'}`],
+                ["Records", 
+                 `Posted: ${formData.datePosted || '-'}\nPublished: ${formData.datePublished || '-'}\nFiled: ${formData.dateFiled || '-'}`, 
+                 "-"]
+            ];
+
+            (doc as any).autoTable({
+                startY: y,
+                head: [columns],
+                body: rows,
+                theme: 'grid',
+                headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: {
+                    0: { cellWidth: 40, fontStyle: 'bold' },
+                    1: { cellWidth: 60 },
+                    2: { cellWidth: 'auto' }
+                }
+            });
+
+            // Signatories
+            let finalY = (doc as any).lastAutoTable.finalY + 20;
+            
+            if (finalY > 250) {
+                doc.addPage();
+                finalY = 30;
+            }
+
+            doc.setFontSize(10).setFont('helvetica', 'normal');
+            
+            doc.text("Certified Correct:", margin, finalY);
+            doc.text("Attested:", pageWidth/2 + 10, finalY);
+            
+            finalY += 15;
+            
+            doc.setFont('helvetica', 'bold');
+            doc.text((formData.secretarySignature || "_______________________").toUpperCase(), margin, finalY);
+            doc.text((formData.viceMayorSignature || "_______________________").toUpperCase(), pageWidth/2 + 10, finalY);
+            
+            finalY += 5;
+            doc.setFont('helvetica', 'normal').setFontSize(8);
+            doc.text("Secretary to the Sanggunian", margin, finalY);
+            doc.text("Municipal Vice Mayor / Presiding Officer", pageWidth/2 + 10, finalY);
+
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for(let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8).setFont('helvetica', 'italic').text(`Generated via Maasim CLS - ${new Date().toLocaleString()}`, pageWidth - margin, 285, { align: 'right' });
+            }
+
+            window.open(doc.output('bloburl'), '_blank');
+
+        } catch (e) {
+            console.error(e);
+            alert("Error generating tracking slip.");
+        }
+    };
+
     const inputClasses = "block w-full px-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm disabled:bg-slate-100 disabled:text-slate-400";
     const labelClasses = "block text-sm font-medium text-slate-700 mb-1";
 
@@ -832,7 +973,7 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                             {/* Calendar of Business Dates */}
                             <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
                                 <p className="text-xs font-bold text-slate-500 uppercase mb-2">Calendar of Business Inclusion</p>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                     <div>
                                         <label className={labelClasses}>Urgent Matters Date</label>
                                         <input type="date" name="urgentMattersDate" value={formData.urgentMattersDate || ''} onChange={handleChange} className={inputClasses} />
@@ -844,6 +985,10 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                                     <div>
                                         <label className={labelClasses}>Unassigned Business Date</label>
                                         <input type="date" name="unassignedBusinessDate" value={formData.unassignedBusinessDate || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Agenda Item No.</label>
+                                        <input type="text" name="agendaItemNumber" value={formData.agendaItemNumber || ''} onChange={handleChange} className={inputClasses} placeholder="Item #" />
                                     </div>
                                 </div>
                             </div>
@@ -870,6 +1015,21 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                                     <div>
                                         <label className={labelClasses}>Chairman</label>
                                         <input type="text" name="committeeReferralChairman" value={formData.committeeReferralChairman || ''} onChange={handleChange} className={inputClasses} placeholder="Chairman Name" readOnly title="Auto-filled based on selected committee" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Committee Report */}
+                            <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Committee Report</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className={labelClasses}>Committee Report No.</label>
+                                        <input type="text" name="committeeReportNumber" value={formData.committeeReportNumber || ''} onChange={handleChange} className={inputClasses} placeholder="CR No." />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Date Reported</label>
+                                        <input type="date" name="committeeReportDate" value={formData.committeeReportDate || ''} onChange={handleChange} className={inputClasses} />
                                     </div>
                                 </div>
                             </div>
@@ -932,6 +1092,51 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                         </div>
                     </div>
 
+                    {/* EXECUTIVE & PROVINCIAL REVIEW */}
+                    <div className="md:col-span-2 border rounded-md p-4 bg-purple-50 border-purple-200">
+                        <p className="font-semibold text-purple-800 mb-3 text-sm uppercase tracking-wide">EXECUTIVE & PROVINCIAL REVIEW</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Executive Action */}
+                            <div className="space-y-3">
+                                <p className="text-xs font-bold text-purple-600 uppercase">Executive Action (Mayor)</p>
+                                <div>
+                                    <label className={labelClasses}>Date Transmitted to Mayor</label>
+                                    <input type="date" name="dateTransmittedToMayor" value={formData.dateTransmittedToMayor || ''} onChange={handleChange} className={inputClasses} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className={labelClasses}>Date Approved</label>
+                                        <input type="date" name="dateApprovedByMayor" value={formData.dateApprovedByMayor || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Date Vetoed</label>
+                                        <input type="date" name="dateVetoedByMayor" value={formData.dateVetoedByMayor || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Provincial Review */}
+                            <div className="space-y-3">
+                                <p className="text-xs font-bold text-purple-600 uppercase">Provincial Review (SP)</p>
+                                <div>
+                                    <label className={labelClasses}>Date Transmitted to SP</label>
+                                    <input type="date" name="dateTransmittedToSP" value={formData.dateTransmittedToSP || ''} onChange={handleChange} className={inputClasses} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className={labelClasses}>SP Resolution No.</label>
+                                        <input type="text" name="spResolutionNumber" value={formData.spResolutionNumber || ''} onChange={handleChange} className={inputClasses} placeholder="Res. No." />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Date Received from SP</label>
+                                        <input type="date" name="dateReceivedFromSP" value={formData.dateReceivedFromSP || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* RECORDS MANAGEMENT */}
                     <div className="md:col-span-2 border rounded-md p-4 bg-gray-50 border-gray-200">
                         <p className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">RECORDS MANAGEMENT</p>
@@ -959,9 +1164,15 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                    <button type="button" onClick={onCancel} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-brand-secondary text-white font-semibold rounded-lg shadow-md hover:bg-brand-primary">Save Document</button>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+                    <button type="button" onClick={handlePrintTrackingSlip} className="px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg shadow-md hover:bg-slate-700 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        Print Tracking Slip
+                    </button>
+                    <div className="flex gap-3">
+                        <button type="button" onClick={onCancel} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300">Cancel</button>
+                        <button type="submit" className="px-4 py-2 bg-brand-secondary text-white font-semibold rounded-lg shadow-md hover:bg-brand-primary">Save Document</button>
+                    </div>
                 </div>
             </form>
             

@@ -117,12 +117,17 @@ export interface IncomingDocument {
   urgentMattersDate?: string;
   unfinishedBusinessDate?: string;
   unassignedBusinessDate?: string;
+  agendaItemNumber?: string;
   
   // First Reading
   firstReadingDate?: string;
   firstReadingRemarks?: string;
   concernedCommittee?: string;
   committeeReferralChairman?: string;
+
+  // Committee Report
+  committeeReportNumber?: string;
+  committeeReportDate?: string;
 
   // Second Reading
   secondReadingDate?: string;
@@ -137,6 +142,16 @@ export interface IncomingDocument {
   outputNumber?: string;
   sponsor?: string;
   seconder?: string;
+
+  // Executive Action (Mayor)
+  dateTransmittedToMayor?: string;
+  dateApprovedByMayor?: string;
+  dateVetoedByMayor?: string;
+
+  // Provincial Review (Sangguniang Panlalawigan)
+  dateTransmittedToSP?: string;
+  spResolutionNumber?: string;
+  dateReceivedFromSP?: string;
 
   // Records Management
   datePosted?: string;

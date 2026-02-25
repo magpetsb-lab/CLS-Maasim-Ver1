@@ -37,32 +37,128 @@ const IncomingDocumentCard: React.FC<IncomingDocumentCardProps> = ({ document, o
     };
 
     const handlePrintTracking = async () => {
+        if (!(window as any).jspdf) return alert("PDF library not loaded.");
+        
         try {
-            if (!(window as any).jspdf) return alert("PDF library not loaded.");
             const { jsPDF } = (window as any).jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const logoData = await getBase64Logo();
+            const pageWidth = 210;
+            const margin = 15;
             
-            // Adjusted for better gap and horizontal layout consistency
+            // Header
             if (logoData) {
-                doc.addImage(logoData, 'PNG', 35, 10, 20, 20);
+                doc.addImage(logoData, 'PNG', margin, 10, 20, 20);
             }
+            doc.setFontSize(10).setFont('helvetica', 'bold').text("Republic of the Philippines", pageWidth/2, 15, { align: 'center' });
+            doc.setFontSize(10).text("Province of Sarangani", pageWidth/2, 20, { align: 'center' });
+            doc.setFontSize(12).text("MUNICIPALITY OF MAASIM", pageWidth/2, 25, { align: 'center' });
+            doc.setFontSize(11).text("OFFICE OF THE SANGGUNIANG BAYAN", pageWidth/2, 30, { align: 'center' });
             
-            doc.setFontSize(12).setFont(undefined, 'bold').text("OFFICE OF THE SANGGUNIANG BAYAN", 115, 18, { align: 'center' });
-            doc.setFontSize(10).setFont(undefined, 'normal').text("Municipality of Maasim, Province of Sarangani", 115, 23, { align: 'center' });
+            doc.setLineWidth(0.5).line(margin, 35, pageWidth - margin, 35);
             
-            doc.setLineWidth(0.5).line(20, 32, 190, 32);
-            doc.setFontSize(16).setFont(undefined, 'bold').text("DOCUMENT TRACKING SLIP", 105, 42, { align: 'center' });
-            const infoData = [
-                ["Subject", document.subject],
-                ["Sender", document.sender],
-                ["Tracking Code", document.referenceNumber],
-                ["Date Received", document.dateReceived],
-                ["Status", document.status]
+            doc.setFontSize(14).text("LEGISLATIVE DOCUMENT TRACKING SLIP", pageWidth/2, 45, { align: 'center' });
+            
+            // Document Info
+            let y = 55;
+            doc.setFontSize(10).setFont('helvetica', 'bold');
+            doc.text(`Reference No.: ${document.referenceNumber || 'N/A'}`, margin, y);
+            doc.text(`Date Received: ${document.dateReceived || 'N/A'} ${document.timeReceived || ''}`, pageWidth - margin, y, { align: 'right' });
+            
+            y += 6;
+            doc.text(`Sender:`, margin, y);
+            doc.setFont('helvetica', 'normal').text(document.sender || 'N/A', margin + 25, y);
+            
+            y += 6;
+            doc.setFont('helvetica', 'bold').text(`Type:`, margin, y);
+            doc.setFont('helvetica', 'normal').text(document.type || 'N/A', margin + 25, y);
+            
+            if (document.category) {
+                doc.setFont('helvetica', 'bold').text(`Category:`, pageWidth/2, y);
+                doc.setFont('helvetica', 'normal').text(document.category, pageWidth/2 + 25, y);
+            }
+
+            y += 6;
+            doc.setFont('helvetica', 'bold').text(`Subject:`, margin, y);
+            const subjectLines = doc.splitTextToSize(document.subject || 'N/A', pageWidth - margin - 30);
+            doc.setFont('helvetica', 'normal').text(subjectLines, margin + 25, y);
+            y += (subjectLines.length * 5) + 5;
+
+            // Tracking Table
+            const columns = ["Stage / Activity", "Date / Details", "Remarks / Status"];
+            const rows = [
+                ["Receipt", `${document.dateReceived} ${document.timeReceived}`, "Received by Office"],
+                ["Calendar of Business", 
+                 `Urgent: ${document.urgentMattersDate || '-'}\nUnfinished: ${document.unfinishedBusinessDate || '-'}\nUnassigned: ${document.unassignedBusinessDate || '-'}`, 
+                 `Agenda Item No.: ${document.agendaItemNumber || '-'}`],
+                ["First Reading", `${document.firstReadingDate || '-'}`, `Ref to: ${document.concernedCommittee || '-'}\nChair: ${document.committeeReferralChairman || '-'}\nRemarks: ${document.firstReadingRemarks || '-'}`],
+                ["Committee Report", `Date: ${document.committeeReportDate || '-'}`, `Report No.: ${document.committeeReportNumber || '-'}`],
+                ["Second Reading", `${document.secondReadingDate || '-'}`, `${document.secondReadingRemarks || '-'}`],
+                ["Third Reading", `${document.thirdReadingDate || '-'}`, `${document.thirdReadingRemarks || '-'}`],
+                ["Legislative Output", 
+                 `${document.outputType || '-'}\nNo.: ${document.outputNumber || '-'}`, 
+                 `Sponsor: ${document.sponsor || '-'}\nSeconder: ${document.seconder || '-'}`],
+                ["Executive Action", 
+                 `Transmitted: ${document.dateTransmittedToMayor || '-'}\nApproved: ${document.dateApprovedByMayor || '-'}\nVetoed: ${document.dateVetoedByMayor || '-'}`, 
+                 "-"],
+                ["Provincial Review", 
+                 `Transmitted: ${document.dateTransmittedToSP || '-'}\nReceived: ${document.dateReceivedFromSP || '-'}`, 
+                 `SP Res No.: ${document.spResolutionNumber || '-'}`],
+                ["Records", 
+                 `Posted: ${document.datePosted || '-'}\nPublished: ${document.datePublished || '-'}\nFiled: ${document.dateFiled || '-'}`, 
+                 "-"]
             ];
-            (doc as any).autoTable({ startY: 55, body: infoData, theme: 'plain', styles: { fontSize: 10 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } } });
+
+            (doc as any).autoTable({
+                startY: y,
+                head: [columns],
+                body: rows,
+                theme: 'grid',
+                headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: {
+                    0: { cellWidth: 40, fontStyle: 'bold' },
+                    1: { cellWidth: 60 },
+                    2: { cellWidth: 'auto' }
+                }
+            });
+
+            // Signatories
+            let finalY = (doc as any).lastAutoTable.finalY + 20;
+            
+            if (finalY > 250) {
+                doc.addPage();
+                finalY = 30;
+            }
+
+            doc.setFontSize(10).setFont('helvetica', 'normal');
+            
+            doc.text("Certified Correct:", margin, finalY);
+            doc.text("Attested:", pageWidth/2 + 10, finalY);
+            
+            finalY += 15;
+            
+            doc.setFont('helvetica', 'bold');
+            doc.text((document.secretarySignature || "_______________________").toUpperCase(), margin, finalY);
+            doc.text((document.viceMayorSignature || "_______________________").toUpperCase(), pageWidth/2 + 10, finalY);
+            
+            finalY += 5;
+            doc.setFont('helvetica', 'normal').setFontSize(8);
+            doc.text("Secretary to the Sanggunian", margin, finalY);
+            doc.text("Municipal Vice Mayor / Presiding Officer", pageWidth/2 + 10, finalY);
+
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for(let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8).setFont('helvetica', 'italic').text(`Generated via Maasim CLS - ${new Date().toLocaleString()}`, pageWidth - margin, 285, { align: 'right' });
+            }
+
             window.open(doc.output('bloburl'), '_blank');
-        } catch (e) { alert("PDF Error"); }
+        } catch (e) {
+            console.error(e);
+            alert("Error generating tracking slip.");
+        }
     };
 
     return (
