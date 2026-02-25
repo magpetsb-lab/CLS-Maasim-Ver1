@@ -829,6 +829,25 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                                 </div>
                             </div>
 
+                            {/* Calendar of Business Dates */}
+                            <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Calendar of Business Inclusion</p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className={labelClasses}>Urgent Matters Date</label>
+                                        <input type="date" name="urgentMattersDate" value={formData.urgentMattersDate || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Unfinished Business Date</label>
+                                        <input type="date" name="unfinishedBusinessDate" value={formData.unfinishedBusinessDate || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClasses}>Unassigned Business Date</label>
+                                        <input type="date" name="unassignedBusinessDate" value={formData.unassignedBusinessDate || ''} onChange={handleChange} className={inputClasses} />
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* First Reading */}
                             <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
                                 <p className="text-xs font-bold text-slate-500 uppercase mb-2">First Reading</p>
@@ -910,6 +929,25 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                                 <option value="">-- Select Seconder --</option>
                                 {availableSignatories.map(leg => <option key={leg.id} value={leg.name}>{leg.name}</option>)}
                             </select>
+                        </div>
+                    </div>
+
+                    {/* RECORDS MANAGEMENT */}
+                    <div className="md:col-span-2 border rounded-md p-4 bg-gray-50 border-gray-200">
+                        <p className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">RECORDS MANAGEMENT</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className={labelClasses}>Date Posted</label>
+                                <input type="date" name="datePosted" value={formData.datePosted || ''} onChange={handleChange} className={inputClasses} />
+                            </div>
+                            <div>
+                                <label className={labelClasses}>Date Published</label>
+                                <input type="date" name="datePublished" value={formData.datePublished || ''} onChange={handleChange} className={inputClasses} />
+                            </div>
+                            <div>
+                                <label className={labelClasses}>Date Filed</label>
+                                <input type="date" name="dateFiled" value={formData.dateFiled || ''} onChange={handleChange} className={inputClasses} />
+                            </div>
                         </div>
                     </div>
 
