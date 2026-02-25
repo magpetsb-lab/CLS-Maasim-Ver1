@@ -88,7 +88,7 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
         }
     };
     
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name.trim()) {
             alert('Name is required.');
@@ -101,11 +101,21 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
         }
 
         const finalData = { ...formData };
+        
         if (profileImage) {
-            if (initialData?.profileImageUrl?.startsWith('blob:')) {
-                URL.revokeObjectURL(initialData.profileImageUrl);
+            try {
+                const base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(profileImage);
+                });
+                finalData.profileImageUrl = base64;
+            } catch (error) {
+                console.error("Error converting image to base64:", error);
+                alert("Failed to process image. Please try again.");
+                return;
             }
-            finalData.profileImageUrl = URL.createObjectURL(profileImage);
         }
 
         if(initialData) {
