@@ -16,19 +16,20 @@ const getInitialFormData = (): Omit<SessionAgenda, 'id'> => ({
     sessionType: 'Regular',
     term: '',
     filePath: undefined,
+    attachments: [],
 });
 
 const SessionAgendaForm: React.FC<SessionAgendaFormProps> = ({ initialData, onSubmit, onCancel, terms }) => {
     const [formData, setFormData] = useState(getInitialFormData());
-    const [attachment, setAttachment] = useState<File | null>(null);
+    const [newAttachments, setNewAttachments] = useState<File[]>([]);
 
     useEffect(() => {
         if (initialData) {
-            setFormData({ ...initialData });
+            setFormData({ ...initialData, attachments: initialData.attachments || [] });
         } else {
              setFormData(getInitialFormData());
         }
-        setAttachment(null);
+        setNewAttachments([]);
     }, [initialData]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -65,17 +66,25 @@ const SessionAgendaForm: React.FC<SessionAgendaFormProps> = ({ initialData, onSu
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setAttachment(e.target.files[0]);
-            setFormData(prev => ({...prev, filePath: undefined}));
+        if (e.target.files && e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            setNewAttachments(prev => [...prev, ...files]);
         }
     };
 
-    const handleRemoveAttachment = () => {
+    const handleRemoveAttachment = (index: number, isNew: boolean) => {
+        if (isNew) {
+            setNewAttachments(prev => prev.filter((_, i) => i !== index));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                attachments: prev.attachments?.filter((_, i) => i !== index)
+            }));
+        }
+    };
+
+    const handleRemoveLegacyAttachment = () => {
         setFormData(prev => ({...prev, filePath: undefined}));
-        setAttachment(null);
-        const fileInput = document.getElementById('attachment') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
     };
     
     const handleSubmit = async (e: React.FormEvent) => {
@@ -86,20 +95,23 @@ const SessionAgendaForm: React.FC<SessionAgendaFormProps> = ({ initialData, onSu
         }
 
         const finalData = { ...formData };
-        if (attachment) {
-            try {
-                const base64 = await new Promise<string>((resolve, reject) => {
+        
+        if (newAttachments.length > 0) {
+            const processedAttachments = await Promise.all(newAttachments.map(async (file) => {
+                return new Promise<{id: string, name: string, data: string, type: string}>((resolve, reject) => {
                     const reader = new FileReader();
-                    reader.readAsDataURL(attachment);
-                    reader.onload = () => resolve(reader.result as string);
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve({
+                        id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        name: file.name,
+                        data: reader.result as string,
+                        type: file.type
+                    });
                     reader.onerror = error => reject(error);
                 });
-                finalData.filePath = base64;
-            } catch (error) {
-                console.error("Error converting file:", error);
-                alert("Failed to process attachment.");
-                return;
-            }
+            }));
+            
+            finalData.attachments = [...(finalData.attachments || []), ...processedAttachments];
         }
 
         if(initialData) {
@@ -161,24 +173,67 @@ const SessionAgendaForm: React.FC<SessionAgendaFormProps> = ({ initialData, onSu
                         <input type="time" id="timeFinished" name="timeFinished" value={formData.timeFinished} onChange={handleChange} className={inputClasses} required />
                     </div>
                      <div className="md:col-span-2">
-                        <label htmlFor="attachment" className={labelClasses}>Attach File</label>
+                        <label className={labelClasses}>Attachments</label>
+                        
+                        {/* Legacy Attachment Display */}
                         {formData.filePath && (
-                            <div className="flex items-center gap-2 mb-2 text-sm">
-                                <a href={formData.filePath} target="_blank" rel="noopener noreferrer" className="text-brand-secondary hover:underline">
-                                    View current attachment
+                            <div className="flex items-center gap-2 mb-2 text-sm bg-slate-50 p-2 rounded border border-slate-200">
+                                <span className="text-slate-500 font-medium">Legacy Attachment:</span>
+                                <a href={formData.filePath} target="_blank" rel="noopener noreferrer" className="text-brand-secondary hover:underline truncate max-w-xs">
+                                    View File
                                 </a>
-                                <button type="button" onClick={handleRemoveAttachment} className="font-semibold text-red-600 hover:text-red-800">(Remove)</button>
+                                <button type="button" onClick={handleRemoveLegacyAttachment} className="ml-auto font-semibold text-red-600 hover:text-red-800 text-xs uppercase">Remove</button>
                             </div>
                         )}
-                        <input
-                            type="file"
-                            id="attachment"
-                            name="attachment"
-                            onChange={handleFileChange}
-                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-light file:text-brand-primary hover:file:bg-blue-200"
-                            accept=".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        />
-                         {attachment && <p className="text-sm text-slate-500 mt-1">New file selected: {attachment.name}</p>}
+
+                        {/* Existing Attachments List */}
+                        {formData.attachments && formData.attachments.length > 0 && (
+                            <div className="space-y-2 mb-3">
+                                {formData.attachments.map((att, idx) => (
+                                    <div key={att.id} className="flex items-center gap-2 text-sm bg-slate-50 p-2 rounded border border-slate-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                        </svg>
+                                        <a href={att.data} download={att.name} className="text-brand-secondary hover:underline truncate flex-grow">
+                                            {att.name}
+                                        </a>
+                                        <button type="button" onClick={() => handleRemoveAttachment(idx, false)} className="font-semibold text-red-600 hover:text-red-800 text-xs uppercase">Remove</button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* New Attachments List */}
+                        {newAttachments.length > 0 && (
+                            <div className="space-y-2 mb-3">
+                                {newAttachments.map((file, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 text-sm bg-blue-50 p-2 rounded border border-blue-100">
+                                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">New</span>
+                                        <span className="text-slate-700 truncate flex-grow">{file.name}</span>
+                                        <button type="button" onClick={() => handleRemoveAttachment(idx, true)} className="font-semibold text-red-600 hover:text-red-800 text-xs uppercase">Remove</button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="mt-2">
+                            <label htmlFor="attachment" className="cursor-pointer inline-flex items-center px-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Files
+                            </label>
+                            <input
+                                type="file"
+                                id="attachment"
+                                name="attachment"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                multiple
+                                accept=".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            />
+                            <p className="mt-1 text-xs text-slate-500">Supported formats: PDF, Word. Multiple files allowed.</p>
+                        </div>
                     </div>
                 </div>
 

@@ -24,6 +24,13 @@ export enum AnalysisType {
   GrammarCheck = 'grammar_check',
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  data: string; // Base64
+  type: string; // MIME type
+}
+
 export interface Resolution {
   id:string;
   resolutionNumber: string;
@@ -35,6 +42,7 @@ export interface Resolution {
   committee: string;
   author: string;
   filePath?: string;
+  attachments?: Attachment[];
 }
 
 export interface Ordinance {
@@ -49,6 +57,7 @@ export interface Ordinance {
   sector: string;
   fullText: string;
   filePath?: string;
+  attachments?: Attachment[];
 }
 
 export type AttendanceStatus = 'Present' | 'Absent' | 'OB' | 'Leave';
@@ -68,6 +77,7 @@ export interface SessionMinute {
   minutesContent?: string;
   filePath?: string;
   audioFilePath?: string;
+  attachments?: Attachment[];
 }
 
 export interface SessionAgenda {
@@ -79,6 +89,7 @@ export interface SessionAgenda {
   sessionType: 'Regular' | 'Special';
   term: string;
   filePath?: string;
+  attachments?: Attachment[];
 }
 
 export interface Attendance {
@@ -97,6 +108,7 @@ export interface CommitteeReport {
   committeeType: 'Meeting' | 'Hearing';
   attendance: Attendance;
   filePath?: string;
+  attachments?: Attachment[];
 }
 
 export interface IncomingDocument {
@@ -112,6 +124,7 @@ export interface IncomingDocument {
   statusDate?: string;
   remarks?: string;
   filePath?: string;
+  attachments?: Attachment[];
 
   // Calendar of Business / Legislative Actions
   urgentMattersDate?: string;

@@ -51,8 +51,9 @@ const SessionMinuteCard: React.FC<SessionMinuteCardProps> = ({ sessionMinute, on
                         </div>
                      </div>
                 </div>
-                <div className="flex-shrink-0 flex items-center space-x-2 mt-2 sm:mt-0 self-start sm:self-center">
-                    {sessionMinute.filePath && (
+                <div className="flex-shrink-0 flex flex-col items-end space-y-1 mt-2 sm:mt-0 self-start sm:self-center">
+                    {/* Legacy File Path */}
+                    {sessionMinute.filePath && !sessionMinute.attachments?.length && (
                         <a
                             href={sessionMinute.filePath}
                             target="_blank"
@@ -66,20 +67,43 @@ const SessionMinuteCard: React.FC<SessionMinuteCardProps> = ({ sessionMinute, on
                             View
                         </a>
                     )}
-                    <button 
-                        onClick={() => onEdit(sessionMinute)}
-                        className="px-2 py-0.5 text-[10px] font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
-                    >
-                        Edit
-                    </button>
-                    {canDelete && (
-                        <button 
-                            onClick={() => onDelete(sessionMinute.id)}
-                            className="px-2 py-0.5 text-[10px] font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
-                        >
-                            Delete
-                        </button>
+
+                    {/* Multiple Attachments */}
+                    {sessionMinute.attachments && sessionMinute.attachments.length > 0 && (
+                        <div className="flex flex-col gap-1 items-end">
+                            {sessionMinute.attachments.map((att, idx) => (
+                                <a
+                                    key={att.id || idx}
+                                    href={att.data}
+                                    download={att.name}
+                                    className="px-2 py-0.5 text-[10px] font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center max-w-[150px] truncate"
+                                    title={att.name}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a3 3 0 006 0V7a1 1 0 112 0v4a5 5 0 01-10 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="truncate">{att.name}</span>
+                                </a>
+                            ))}
+                        </div>
                     )}
+
+                    <div className="flex space-x-2">
+                        <button 
+                            onClick={() => onEdit(sessionMinute)}
+                            className="px-2 py-0.5 text-[10px] font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
+                        >
+                            Edit
+                        </button>
+                        {canDelete && (
+                            <button 
+                                onClick={() => onDelete(sessionMinute.id)}
+                                className="px-2 py-0.5 text-[10px] font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
+                            >
+                                Delete
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
