@@ -19,17 +19,16 @@ const OrdinanceCard: React.FC<OrdinanceCardProps> = ({ ordinance, onEdit, onDele
             <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-2 mb-1">
-                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-800">
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                            Ord. No: {ordinance.ordinanceNumber}
                         </span>
-                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                            Term: {formatTerm(ordinance.term)}
                         </span>
-                        <p className="text-[10px] text-slate-500">Approved: {ordinance.dateApproved}</p>
+                        <p className="text-xs text-slate-500">Approved: {ordinance.dateApproved}</p>
                     </div>
-                    <h3 className="text-sm font-bold text-brand-primary mb-1 leading-tight">{ordinance.ordinanceTitle}</h3>
-                    <p className="text-[10px] text-slate-700 mb-1 line-clamp-2">{ordinance.fullText}</p>
-                    <div className="text-[10px] text-slate-600 flex flex-wrap gap-x-3 gap-y-0.5">
+                    <h3 className="text-lg font-bold text-brand-primary mb-1 leading-tight">{ordinance.ordinanceTitle}</h3>
+                    <div className="text-sm text-slate-600 flex flex-wrap gap-x-3 gap-y-0.5">
                         <span><strong>Author:</strong> {ordinance.author}</span>
                         <span><strong>Committee:</strong> {ordinance.committee}</span>
                     </div>
@@ -41,7 +40,7 @@ const OrdinanceCard: React.FC<OrdinanceCardProps> = ({ ordinance, onEdit, onDele
                             href={ordinance.filePath}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2 py-0.5 text-[10px] font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
+                            className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
                             aria-label="View attached file"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -59,7 +58,7 @@ const OrdinanceCard: React.FC<OrdinanceCardProps> = ({ ordinance, onEdit, onDele
                                     key={att.id || idx}
                                     href={att.data}
                                     download={att.name}
-                                    className="px-2 py-0.5 text-[10px] font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center max-w-[150px] truncate"
+                                    className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center max-w-[150px] truncate"
                                     title={att.name}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -74,14 +73,14 @@ const OrdinanceCard: React.FC<OrdinanceCardProps> = ({ ordinance, onEdit, onDele
                     <div className="flex space-x-2">
                         <button 
                             onClick={() => onEdit(ordinance)}
-                            className="px-2 py-0.5 text-[10px] font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
+                            className="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
                         >
                             Edit
                         </button>
                         {canDelete && (
                             <button 
                                 onClick={() => onDelete(ordinance.id)}
-                                className="px-2 py-0.5 text-[10px] font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
+                                className="px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
                             >
                                 Delete
                             </button>

@@ -166,12 +166,12 @@ const IncomingDocumentCard: React.FC<IncomingDocumentCardProps> = ({ document, o
             <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                 <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-2 mb-1">
-                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">Ref No: {document.referenceNumber}</span>
-                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${statusColor}`}>{document.status}</span>
-                        <span className="text-[10px] text-slate-500">Received: {document.dateReceived}</span>
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">Ref No: {document.referenceNumber}</span>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusColor}`}>{document.status}</span>
+                        <span className="text-xs text-slate-500">Received: {document.dateReceived}</span>
                     </div>
-                    <h3 className="text-sm font-bold text-brand-primary mb-0.5 leading-tight">{document.subject}</h3>
-                    <p className="text-[10px] font-medium text-slate-700">From: {document.sender}</p>
+                    <h3 className="text-lg font-bold text-brand-primary mb-0.5 leading-tight">{document.subject}</h3>
+                    <p className="text-sm font-medium text-slate-700">From: {document.sender}</p>
                 </div>
                 <div className="flex-shrink-0 flex flex-col items-end space-y-1 mt-2 sm:mt-0">
                     {/* Legacy File Path */}
@@ -180,7 +180,7 @@ const IncomingDocumentCard: React.FC<IncomingDocumentCardProps> = ({ document, o
                             href={document.filePath}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2 py-0.5 text-[10px] font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
+                            className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a3 3 0 006 0V7a1 1 0 112 0v4a5 5 0 01-10 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
@@ -197,7 +197,7 @@ const IncomingDocumentCard: React.FC<IncomingDocumentCardProps> = ({ document, o
                                     key={att.id || idx}
                                     href={att.data}
                                     download={att.name}
-                                    className="px-2 py-0.5 text-[10px] font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center max-w-[150px] truncate"
+                                    className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center max-w-[150px] truncate"
                                     title={att.name}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -210,9 +210,9 @@ const IncomingDocumentCard: React.FC<IncomingDocumentCardProps> = ({ document, o
                     )}
 
                     <div className="flex space-x-2">
-                        <button onClick={handlePrintTracking} className="px-2 py-0.5 text-[10px] font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 flex items-center"><svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" /></svg>Tracking</button>
-                        <button onClick={() => onEdit(document)} className="px-2 py-0.5 text-[10px] font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200">Edit</button>
-                        {canDelete && <button onClick={() => onDelete(document.id)} className="px-2 py-0.5 text-[10px] font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200">Delete</button>}
+                        <button onClick={handlePrintTracking} className="px-2 py-0.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 flex items-center"><svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" /></svg>Tracking</button>
+                        <button onClick={() => onEdit(document)} className="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200">Edit</button>
+                        {canDelete && <button onClick={() => onDelete(document.id)} className="px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200">Delete</button>}
                     </div>
                 </div>
             </div>
