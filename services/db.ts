@@ -361,7 +361,8 @@ export class LegislativeDB {
                 if (serverData) {
                     // Update local cache with server data
                     await this.seedStore(storeName, serverData);
-                    return serverData;
+                    // Return combined/local data instead of just server data
+                    return this.getAllFromLocal(storeName);
                 }
             } catch (e) {
                 console.warn(`[API] Could not sync ${storeName}, using local data.`, e);

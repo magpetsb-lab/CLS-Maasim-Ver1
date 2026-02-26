@@ -163,7 +163,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.reportNumber.trim() || !formData.committee.trim() || !formData.term.trim()) {
             alert('Report Number, Term, and Committee are required.');
@@ -172,10 +172,19 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
 
         const finalData = { ...formData };
         if (attachment) {
-            if (initialData?.filePath?.startsWith('blob:')) {
-                URL.revokeObjectURL(initialData.filePath);
+            try {
+                const base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(attachment);
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = error => reject(error);
+                });
+                finalData.filePath = base64;
+            } catch (error) {
+                console.error("Error converting file:", error);
+                alert("Failed to process attachment.");
+                return;
             }
-            finalData.filePath = URL.createObjectURL(attachment);
         }
 
         if(initialData) {

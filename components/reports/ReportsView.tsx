@@ -164,8 +164,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                     if (measure) {
                         const allowedSectorNames = measure.sectorIds
                             .map(id => sectors.find(s => s.id === id)?.name)
-                            .filter(Boolean);
-                        if (doc.sector && !allowedSectorNames.includes(doc.sector)) return false;
+                            .filter(Boolean) as string[];
+                        if (!doc.sector || !allowedSectorNames.includes(doc.sector)) return false;
                     }
                 } else if (selectedSector) {
                     if (doc.sector !== selectedSector) return false;

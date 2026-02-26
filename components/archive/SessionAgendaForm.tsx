@@ -78,7 +78,7 @@ const SessionAgendaForm: React.FC<SessionAgendaFormProps> = ({ initialData, onSu
         if (fileInput) fileInput.value = '';
     };
     
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.seriesNumber.trim() || !formData.sessionDate || !formData.timeStarted || !formData.timeFinished || !formData.term) {
             alert('Series Number, Session Date, Start Time, Finish Time, and Term are required.');
@@ -87,10 +87,19 @@ const SessionAgendaForm: React.FC<SessionAgendaFormProps> = ({ initialData, onSu
 
         const finalData = { ...formData };
         if (attachment) {
-            if (initialData?.filePath?.startsWith('blob:')) {
-                URL.revokeObjectURL(initialData.filePath);
+            try {
+                const base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(attachment);
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = error => reject(error);
+                });
+                finalData.filePath = base64;
+            } catch (error) {
+                console.error("Error converting file:", error);
+                alert("Failed to process attachment.");
+                return;
             }
-            finalData.filePath = URL.createObjectURL(attachment);
         }
 
         if(initialData) {

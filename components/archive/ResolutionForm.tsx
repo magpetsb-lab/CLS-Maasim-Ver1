@@ -174,7 +174,7 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
         if (fileInput) fileInput.value = '';
     };
     
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.resolutionNumber.trim() || !formData.resolutionTitle.trim()) {
             alert('Resolution Number and Title are required.');
@@ -182,11 +182,21 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
         }
 
         const finalData = { ...formData };
+        
         if (attachment) {
-            if (initialData?.filePath?.startsWith('blob:')) {
-                URL.revokeObjectURL(initialData.filePath);
+            try {
+                const base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(attachment);
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = error => reject(error);
+                });
+                finalData.filePath = base64;
+            } catch (error) {
+                console.error("Error converting file:", error);
+                alert("Failed to process attachment.");
+                return;
             }
-            finalData.filePath = URL.createObjectURL(attachment);
         }
 
         if(initialData) {

@@ -28,10 +28,10 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({ result }) => {
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow duration-300">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                 <div className="flex-grow">
-                    <div className="flex items-center flex-wrap gap-4 mb-2">
+                    <div className="flex items-center flex-wrap gap-3 mb-1">
                         <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${typeColor}`}>
                             {result.type}
                         </span>
@@ -39,17 +39,17 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({ result }) => {
                            {result.type === 'Resolution' ? 'Res. No:' : 'Ord. No:'} {result.number}
                         </span>
                     </div>
-                    <h3 className="text-base font-bold text-brand-primary">{result.title}</h3>
+                    <h3 className="text-sm font-bold text-brand-primary leading-tight">{result.title}</h3>
                 </div>
                 <div className="flex-shrink-0 mt-2 sm:mt-0 flex items-center flex-wrap justify-end gap-2">
-                     <p className="text-xs text-slate-500 whitespace-nowrap mr-2">Approved: {result.date}</p>
+                     <p className="text-[10px] text-slate-500 whitespace-nowrap mr-2">Approved: {result.date}</p>
                      {result.filePath && (
                         <>
                             <a
                                 href={result.filePath}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
+                                className="px-2 py-0.5 text-[10px] font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
                                 aria-label="View attached file"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -60,7 +60,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({ result }) => {
                             </a>
                             <button
                                 onClick={handlePrint}
-                                className="px-2 py-0.5 text-xs font-medium text-brand-secondary bg-blue-100 rounded-md hover:bg-blue-200 transition-colors inline-flex items-center"
+                                className="px-2 py-0.5 text-[10px] font-medium text-brand-secondary bg-blue-100 rounded-md hover:bg-blue-200 transition-colors inline-flex items-center"
                                 aria-label="Print attached file (opens in new tab)"
                                 title="Print attached file (opens in new tab)"
                             >
