@@ -29,13 +29,14 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
         minutesContent: '',
         filePath: undefined,
         audioFilePath: undefined,
+        attachments: [],
     });
     
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [audioFile, setAudioFile] = useState<File | null>(null);
-    const [finalDocFile, setFinalDocFile] = useState<File | null>(null);
+    const [newAttachments, setNewAttachments] = useState<File[]>([]);
     const [aiStatus, setAiStatus] = useState<string>('');
     const [showLiveModal, setShowLiveModal] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -49,10 +50,12 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
             setFormData({ 
                 ...initialData, 
                 minutesContent: initialData.minutesContent || '',
-                sessionType: initialData.sessionType || 'Regular'
+                sessionType: initialData.sessionType || 'Regular',
+                attachments: initialData.attachments || []
             });
             if (initialData.audioFilePath) setAudioUrl(initialData.audioFilePath);
         }
+        setNewAttachments([]);
     }, [initialData]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -89,12 +92,26 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
         }
     };
 
-    const handleFinalDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setFinalDocFile(file);
-            setAiStatus(`Official file attached: ${file.name}`);
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            setNewAttachments(prev => [...prev, ...files]);
         }
+    };
+
+    const handleRemoveAttachment = (index: number, isNew: boolean) => {
+        if (isNew) {
+            setNewAttachments(prev => prev.filter((_, i) => i !== index));
+        } else {
+            setFormData((prev: any) => ({
+                ...prev,
+                attachments: prev.attachments?.filter((_: any, i: number) => i !== index)
+            }));
+        }
+    };
+
+    const handleRemoveLegacyAttachment = () => {
+        setFormData((prev: any) => ({...prev, filePath: undefined}));
     };
 
     const handleTranscribeAudio = async (summarized: boolean = false) => {
@@ -234,10 +251,29 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const dataToSave = { ...formData };
         if (audioFile) dataToSave.audioFilePath = URL.createObjectURL(audioFile);
-        if (finalDocFile) dataToSave.filePath = URL.createObjectURL(finalDocFile);
+        
+        // Process new attachments
+        if (newAttachments.length > 0) {
+            const processedAttachments = await Promise.all(newAttachments.map(async (file) => {
+                return new Promise<{id: string, name: string, data: string, type: string}>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve({
+                        id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        name: file.name,
+                        data: reader.result as string,
+                        type: file.type
+                    });
+                    reader.onerror = error => reject(error);
+                });
+            }));
+            
+            dataToSave.attachments = [...(dataToSave.attachments || []), ...processedAttachments];
+        }
+
         onSubmit(dataToSave);
     };
 
@@ -389,34 +425,59 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
                             <div>
                                 <h3 className="text-sm font-bold uppercase text-slate-800 mb-4 flex items-center gap-2">
                                     <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    Final Journal Attachment
+                                    Add Files
                                 </h3>
 
-                                {formData.filePath && !finalDocFile && (
+                                {/* Legacy Attachment Display */}
+                                {formData.filePath && (
                                     <div className="mb-4 flex items-center gap-3 bg-emerald-50 p-3 rounded-lg border border-emerald-100">
                                         <div className="bg-emerald-500 p-1.5 rounded text-white"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>
                                         <div className="flex-grow min-w-0">
-                                            <p className="text-[9px] font-black uppercase text-emerald-700 leading-none">Validated Record</p>
-                                            <a href={formData.filePath} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-slate-700 underline truncate block">Attached_Journal_Signed.pdf</a>
+                                            <p className="text-[9px] font-black uppercase text-emerald-700 leading-none">Legacy Attachment</p>
+                                            <a href={formData.filePath} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-slate-700 underline truncate block">View File</a>
                                         </div>
+                                        <button type="button" onClick={handleRemoveLegacyAttachment} className="text-red-500 hover:text-red-700"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                    </div>
+                                )}
+
+                                {/* Existing Attachments List */}
+                                {formData.attachments && formData.attachments.length > 0 && (
+                                    <div className="space-y-2 mb-3">
+                                        {formData.attachments.map((att: any, idx: number) => (
+                                            <div key={att.id} className="flex items-center gap-2 text-sm bg-slate-50 p-2 rounded border border-slate-200">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                </svg>
+                                                <a href={att.data} download={att.name} className="text-brand-secondary hover:underline truncate flex-grow">
+                                                    {att.name}
+                                                </a>
+                                                <button type="button" onClick={() => handleRemoveAttachment(idx, false)} className="font-semibold text-red-600 hover:text-red-800 text-xs uppercase">Remove</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* New Attachments List */}
+                                {newAttachments.length > 0 && (
+                                    <div className="space-y-2 mb-3">
+                                        {newAttachments.map((file, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 text-sm bg-blue-50 p-2 rounded border border-blue-100">
+                                                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">New</span>
+                                                <span className="text-slate-700 truncate flex-grow">{file.name}</span>
+                                                <button type="button" onClick={() => handleRemoveAttachment(idx, true)} className="font-semibold text-red-600 hover:text-red-800 text-xs uppercase">Remove</button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 
                                 <label className="block group">
                                     <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-emerald-400 bg-slate-50 rounded-xl p-6 cursor-pointer transition-all">
                                         <svg className="w-8 h-8 text-slate-300 group-hover:text-emerald-500 mb-2 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                                        <span className="text-[10px] font-bold uppercase text-slate-400 text-center tracking-wider">Browse Scanned Journal (PDF/Doc)</span>
-                                        <input type="file" accept=".pdf,.doc,.docx" onChange={handleFinalDocUpload} className="hidden" />
+                                        <span className="text-[10px] font-bold uppercase text-slate-400 text-center tracking-wider">Browse Files</span>
+                                        <input type="file" accept=".pdf,.doc,.docx,image/*" onChange={handleFileChange} className="hidden" multiple />
                                     </div>
                                 </label>
                             </div>
-                            
-                            {finalDocFile && (
-                                <div className="mt-3 flex items-center justify-between bg-slate-800 p-2 rounded-lg text-white">
-                                    <p className="text-[10px] truncate pr-4 italic">{finalDocFile.name}</p>
-                                    <button onClick={() => setFinalDocFile(null)} className="text-slate-400 hover:text-white"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
-                                </div>
-                            )}
                         </div>
                     </div>
 
