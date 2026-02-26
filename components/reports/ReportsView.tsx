@@ -75,6 +75,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
     const [endDate, setEndDate] = useState<string>('');
     const [reportType, setReportType] = useState<'All' | 'Resolutions' | 'Ordinances' | 'Sessions' | 'SessionAgendas' | 'CommitteeReports' | 'Attendance' | 'CommitteeAttendance' | 'ElectiveOfficials' | 'StandingCommittees'>('All');
     const [sessionTypeFilter, setSessionTypeFilter] = useState<'All' | 'Regular' | 'Special' | 'Meeting' | 'Hearing'>('All');
+    const [categoryFilterType, setCategoryFilterType] = useState<'None' | 'Measure' | 'Sector'>('None');
 
     const filteredData = useMemo(() => {
         if (reportType === 'Attendance' || reportType === 'CommitteeAttendance' || reportType === 'ElectiveOfficials' || reportType === 'StandingCommittees') return [];
@@ -819,6 +820,42 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                                     <option value="">{reportType === 'Attendance' || reportType === 'CommitteeAttendance' ? 'All Officials' : reportType === 'StandingCommittees' ? 'All Chairmen' : 'All Authors'}</option>
                                     {legislators.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
                                 </select>
+                            </div>
+                        )}
+                        {reportType !== 'Sessions' && reportType !== 'SessionAgendas' && reportType !== 'CommitteeReports' && reportType !== 'ElectiveOfficials' && reportType !== 'StandingCommittees' && reportType !== 'Attendance' && reportType !== 'CommitteeAttendance' && (
+                            <div className="border-t border-slate-200 pt-4 mt-4">
+                                <label className={labelClasses}>Filter by Category</label>
+                                <select 
+                                    value={categoryFilterType} 
+                                    onChange={(e) => {
+                                        setCategoryFilterType(e.target.value as any);
+                                        setSelectedMeasure('');
+                                        setSelectedSector('');
+                                    }} 
+                                    className={inputClasses}
+                                >
+                                    <option value="None">None</option>
+                                    <option value="Measure">By Legislative Measure (Group)</option>
+                                    <option value="Sector">By Individual Sector</option>
+                                </select>
+
+                                {categoryFilterType === 'Measure' && (
+                                    <div className="mt-2">
+                                        <select value={selectedMeasure} onChange={(e) => setSelectedMeasure(e.target.value)} className={inputClasses}>
+                                            <option value="">-- Select Legislative Measure --</option>
+                                            {legislativeMeasures.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {categoryFilterType === 'Sector' && (
+                                    <div className="mt-2">
+                                        <select value={selectedSector} onChange={(e) => setSelectedSector(e.target.value)} className={inputClasses}>
+                                            <option value="">-- Select Sector --</option>
+                                            {sectors.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         )}
                         <div className="pt-4 mt-4 border-t border-slate-200 space-y-3">
