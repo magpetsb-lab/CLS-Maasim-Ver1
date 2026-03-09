@@ -65,11 +65,13 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
             id: res.id, type: 'Resolution' as const, title: res.resolutionTitle, number: res.resolutionNumber, date: res.dateApproved,
             searchText: `${res.resolutionTitle} ${res.resolutionNumber} ${res.author}`.toLowerCase(),
             filePath: res.filePath,
+            attachments: res.attachments,
         }));
         const ordList = ordinances.map(ord => ({
             id: ord.id, type: 'Ordinance' as const, title: ord.ordinanceTitle, number: ord.ordinanceNumber, date: ord.dateApproved,
             searchText: `${ord.ordinanceTitle} ${ord.ordinanceNumber} ${ord.author}`.toLowerCase(),
             filePath: ord.filePath,
+            attachments: ord.attachments,
         }));
         return [...resList, ...ordList].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [resolutions, ordinances]);
