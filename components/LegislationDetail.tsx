@@ -32,7 +32,12 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
 
     React.useEffect(() => {
         if (initialData) {
-            setFormData({ ...initialData });
+            const sortedPositions = [...(initialData.positions || [])].sort((a, b) => {
+                const aYear = parseInt(a.term.split('-')[0]) || 0;
+                const bYear = parseInt(b.term.split('-')[0]) || 0;
+                return bYear - aYear;
+            });
+            setFormData({ ...initialData, positions: sortedPositions });
         } else {
              setFormData(getInitialFormData());
         }
@@ -66,10 +71,18 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
             id: `pos-${Date.now()}`,
             ...newPosition,
         };
-        setFormData(prev => ({
-            ...prev,
-            positions: [...(prev.positions || []), positionToAdd],
-        }));
+        setFormData(prev => {
+            const updatedPositions = [...(prev.positions || []), positionToAdd];
+            updatedPositions.sort((a, b) => {
+                const aYear = parseInt(a.term.split('-')[0]) || 0;
+                const bYear = parseInt(b.term.split('-')[0]) || 0;
+                return bYear - aYear;
+            });
+            return {
+                ...prev,
+                positions: updatedPositions,
+            };
+        });
         setNewPosition(getInitialPositionData());
     };
 
