@@ -110,6 +110,17 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
             );
         }
 
+        const currentYear = new Date().getFullYear();
+        const presentTermObj = props.terms.find(t => {
+            const from = parseInt(t.yearFrom.split('-')[0]);
+            const to = parseInt(t.yearTo.split('-')[0]);
+            return currentYear >= from && currentYear <= to;
+        }) || [...props.terms].sort((a, b) => parseInt(b.yearTo) - parseInt(a.yearTo))[0];
+        
+        const presentTermString = presentTermObj ? `${presentTermObj.yearFrom}-${presentTermObj.yearTo}` : '';
+
+        const sortedLegislators = [...props.legislators].sort((a, b) => a.name.localeCompare(b.name));
+
         return (
             <div>
                  <div className="flex justify-between items-center mb-4">
@@ -123,15 +134,16 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
                         Add New Profile
                     </button>
                 </div>
-                {props.legislators.length > 0 ? (
+                {sortedLegislators.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {props.legislators.map(leg => (
+                        {sortedLegislators.map(leg => (
                             <LegislationCard
                                 key={leg.id} 
                                 legislator={leg}
                                 onEdit={handleEdit} 
                                 onDelete={props.onDeleteLegislator}
                                 canDelete={canDelete}
+                                presentTermString={presentTermString}
                             />
                         ))}
                     </div>

@@ -7,6 +7,7 @@ interface LegislationCardProps {
   onEdit: (legislator: Legislator) => void;
   onDelete: (id: string) => void;
   canDelete: boolean;
+  presentTermString?: string;
 }
 
 const UserIcon = () => (
@@ -16,11 +17,16 @@ const UserIcon = () => (
 );
 
 const formatTerm = (term: string) => {
+    if (!term) return '';
     const matches = term.match(/^(\d{4}).*?(\d{4})/);
     return matches ? `${matches[1]}-${matches[2]}` : term;
 };
 
-const LegislationCard: React.FC<LegislationCardProps> = ({ legislator, onEdit, onDelete, canDelete }) => {
+const LegislationCard: React.FC<LegislationCardProps> = ({ legislator, onEdit, onDelete, canDelete, presentTermString }) => {
+  const displayPositions = presentTermString 
+    ? legislator.positions.filter(p => p.term === presentTermString)
+    : legislator.positions;
+
   return (
     <div
       className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col h-full items-center p-6"
@@ -53,9 +59,17 @@ const LegislationCard: React.FC<LegislationCardProps> = ({ legislator, onEdit, o
             )}
         </div>
         
-        {legislator.positions.length > 0 ? (
-            <div className="w-full mt-4 space-y-2 text-left">
-                {legislator.positions.map((pos) => (
+        {presentTermString && (
+            <div className="w-full text-center mt-2 mb-1">
+                <span className="inline-block px-2 py-1 bg-brand-light text-brand-primary text-xs font-semibold rounded-full">
+                    Present Term: {formatTerm(presentTermString)}
+                </span>
+            </div>
+        )}
+
+        {displayPositions.length > 0 ? (
+            <div className="w-full mt-2 space-y-2 text-left">
+                {displayPositions.map((pos) => (
                     <div key={pos.id} className="bg-slate-50 p-2 rounded-md border border-slate-200">
                         <p className="text-sm font-semibold text-brand-dark">{pos.title}</p>
                         <div className="text-xs text-slate-500 mt-1 font-mono">
@@ -65,7 +79,7 @@ const LegislationCard: React.FC<LegislationCardProps> = ({ legislator, onEdit, o
                 ))}
             </div>
         ) : (
-            <p className="text-sm text-slate-500 mt-2 italic">No positions assigned.</p>
+            <p className="text-sm text-slate-500 mt-2 italic">No positions in present term.</p>
         )}
 
         <div className="flex space-x-2 mt-auto pt-4">
