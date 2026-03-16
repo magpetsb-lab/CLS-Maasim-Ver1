@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Resolution, Legislator, CommitteeMembership, Term, Sector } from '../../types';
+import QRScanner from '../QRScanner';
 
 interface ResolutionFormProps {
     initialData?: Resolution | null;
@@ -27,6 +28,7 @@ const getInitialFormData = (): Omit<Resolution, 'id'> => ({
 const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, onCancel, legislators, committeeMemberships, terms, sectors }) => {
     const [formData, setFormData] = useState(getInitialFormData());
     const [newAttachments, setNewAttachments] = useState<File[]>([]);
+    const [isScanning, setIsScanning] = useState(false);
 
     useEffect(() => {
         if (initialData) {
@@ -36,6 +38,29 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
         }
         setNewAttachments([]);
     }, [initialData]);
+
+    const handleScan = (data: string) => {
+        const parts = data.split('|');
+        if (parts.length >= 3) {
+            setFormData(prev => ({
+                ...prev,
+                resolutionNumber: parts[0].trim(),
+                resolutionTitle: parts[1].trim(),
+                term: parts[2].trim()
+            }));
+            setIsScanning(false);
+        } else {
+            alert('Invalid QR Code format. Expected: No.|Title|Term');
+        }
+    };
+
+    const sortedTerms = useMemo(() => {
+        return [...terms].sort((a, b) => {
+            const aYear = parseInt(a.yearFrom.split('-')[0]) || 0;
+            const bYear = parseInt(b.yearFrom.split('-')[0]) || 0;
+            return bYear - aYear;
+        });
+    }, [terms]);
 
     const availableAuthors = useMemo(() => {
         if (!formData.term) return legislators;
@@ -117,9 +142,27 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
 
     return (
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto relative">
-            <h2 className="text-2xl font-bold text-brand-primary mb-6">
-                {initialData ? 'Edit Resolution' : 'Add New Resolution'}
-            </h2>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-brand-primary">
+                    {initialData ? 'Edit Resolution' : 'Add New Resolution'}
+                </h2>
+                {!initialData && (
+                    <button
+                        type="button"
+                        onClick={() => setIsScanning(true)}
+                        className="px-4 py-2 bg-brand-secondary text-white font-semibold rounded-lg shadow-md hover:bg-brand-primary transition-colors flex items-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                        </svg>
+                        Scan QR Code
+                    </button>
+                )}
+            </div>
+
+            {isScanning && (
+                <QRScanner onScan={handleScan} onClose={() => setIsScanning(false)} />
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -131,7 +174,7 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
                         <label htmlFor="term" className={labelClasses}>Term</label>
                         <select id="term" name="term" value={formData.term} onChange={handleChange} className={inputClasses} required>
                             <option value="" disabled>-- Select Term --</option>
-                            {terms.map(term => (
+                            {sortedTerms.map(term => (
                                 <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
                                     {term.yearFrom} - {term.yearTo}
                                 </option>
