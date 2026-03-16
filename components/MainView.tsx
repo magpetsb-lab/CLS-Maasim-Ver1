@@ -146,13 +146,24 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
                             <span className="bg-slate-100 text-slate-400 text-[10px] px-2 py-0.5 rounded font-mono">v1.4.7</span>
                         </div>
                     </div>
-                    <div className="flex gap-3 w-full md:w-auto">
-                        <div className="flex-grow md:w-96">
-                            <SearchBar query={searchQuery} onQueryChange={setSearchQuery} placeholder="Quick search titles, authors or numbers..." />
+                    <div className="flex flex-col gap-2 w-full md:w-auto">
+                        <div className="flex gap-3 w-full">
+                            <div className="flex-grow md:w-96">
+                                <SearchBar query={searchQuery} onQueryChange={setSearchQuery} placeholder="Quick search titles, authors or numbers..." />
+                            </div>
+                            <button onClick={() => setShowScanner(true)} className="bg-slate-900 text-white p-4 rounded-2xl hover:bg-black transition-all shadow-xl active:scale-95 group" title="Scan Barcode">
+                                <svg className="h-6 w-6 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
+                            </button>
                         </div>
-                        <button onClick={() => setShowScanner(true)} className="bg-slate-900 text-white p-4 rounded-2xl hover:bg-black transition-all shadow-xl active:scale-95 group">
-                            <svg className="h-6 w-6 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
-                        </button>
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="text-xs font-semibold text-slate-500 hover:text-red-600 transition-colors self-start flex items-center gap-1"
+                            >
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                Clear Search
+                            </button>
+                        )}
                     </div>
                 </div>
                 
