@@ -175,7 +175,7 @@ const OrdinanceForm: React.FC<OrdinanceFormProps> = ({ initialData, onSubmit, on
                             <option value="" disabled>-- Select Term --</option>
                             {sortedTerms.map(term => (
                                 <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
-                                    {term.yearFrom} - {term.yearTo}
+                                    {term.yearFrom}-{term.yearTo}
                                 </option>
                             ))}
                         </select>

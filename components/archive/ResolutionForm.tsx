@@ -176,7 +176,7 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
                             <option value="" disabled>-- Select Term --</option>
                             {sortedTerms.map(term => (
                                 <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
-                                    {term.yearFrom} - {term.yearTo}
+                                    {term.yearFrom}-{term.yearTo}
                                 </option>
                             ))}
                         </select>
