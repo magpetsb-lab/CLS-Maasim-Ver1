@@ -39,6 +39,14 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
         setOtherAttendee('');
     }, [initialData]);
 
+    const sortedTerms = useMemo(() => {
+        return [...terms].sort((a, b) => {
+            const aYear = parseInt(a.yearFrom.split('-')[0]) || 0;
+            const bYear = parseInt(b.yearFrom.split('-')[0]) || 0;
+            return bYear - aYear;
+        });
+    }, [terms]);
+
     const uniqueCommitteeNames = useMemo(() => {
         if (!formData.term) {
             return [];
@@ -245,7 +253,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
                         <label htmlFor="term" className={labelClasses}>Term</label>
                         <select id="term" name="term" value={formData.term} onChange={handleChange} className={inputClasses} required autoFocus>
                             <option value="" disabled>-- Select a Term --</option>
-                            {terms.map(term => {
+                            {sortedTerms.map(term => {
                                 const termValue = `${term.yearFrom}-${term.yearTo}`;
                                 const displayLabel = `${term.yearFrom.split('-')[0]}-${term.yearTo.split('-')[0]}`;
                                 return <option key={term.id} value={termValue}>{displayLabel}</option>;

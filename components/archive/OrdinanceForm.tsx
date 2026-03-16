@@ -194,11 +194,15 @@ const OrdinanceForm: React.FC<OrdinanceFormProps> = ({ initialData, onSubmit, on
                         <label htmlFor="term" className={labelClasses}>Term</label>
                         <select id="term" name="term" value={formData.term} onChange={handleChange} className={inputClasses} required>
                             <option value="" disabled>-- Select Term --</option>
-                            {sortedTerms.map(term => (
-                                <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
-                                    {term.yearFrom}-{term.yearTo}
-                                </option>
-                            ))}
+                            {sortedTerms.map(term => {
+                                const startYear = term.yearFrom.split('-')[0];
+                                const endYear = term.yearTo.split('-')[0];
+                                return (
+                                    <option key={term.id} value={`${startYear}-${endYear}`}>
+                                        {startYear}-{endYear}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                     <div>

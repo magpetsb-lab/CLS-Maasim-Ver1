@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { SessionAgenda, Term } from '../../types';
 
 interface SessionAgendaFormProps {
@@ -31,6 +31,14 @@ const SessionAgendaForm: React.FC<SessionAgendaFormProps> = ({ initialData, onSu
         }
         setNewAttachments([]);
     }, [initialData]);
+
+    const sortedTerms = useMemo(() => {
+        return [...terms].sort((a, b) => {
+            const aYear = parseInt(a.yearFrom.split('-')[0]) || 0;
+            const bYear = parseInt(b.yearFrom.split('-')[0]) || 0;
+            return bYear - aYear;
+        });
+    }, [terms]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -157,7 +165,7 @@ const SessionAgendaForm: React.FC<SessionAgendaFormProps> = ({ initialData, onSu
                         <label htmlFor="term" className={labelClasses}>Term</label>
                         <select id="term" name="term" value={formData.term} onChange={handleChange} className={inputClasses} required>
                             <option value="" disabled>-- Select a Term --</option>
-                            {terms.map(term => {
+                            {sortedTerms.map(term => {
                                 const termValue = `${term.yearFrom}-${term.yearTo}`;
                                 const displayLabel = `${term.yearFrom.split('-')[0]}-${term.yearTo.split('-')[0]}`;
                                 return <option key={term.id} value={termValue}>{displayLabel}</option>;

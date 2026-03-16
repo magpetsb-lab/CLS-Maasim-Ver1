@@ -44,6 +44,14 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
     // UI Personalization for the editor
     const [fontFamily, setFontFamily] = useState(FONT_FAMILIES[0].value);
     const [fontSize, setFontSize] = useState('12pt');
+    
+    const sortedTerms = useMemo(() => {
+        return [...terms].sort((a, b) => {
+            const aYear = parseInt(a.yearFrom.split('-')[0]) || 0;
+            const bYear = parseInt(b.yearFrom.split('-')[0]) || 0;
+            return bYear - aYear;
+        });
+    }, [terms]);
 
     useEffect(() => {
         if (initialData) {
@@ -346,7 +354,7 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Legislative Term</label>
                             <select name="term" value={formData.term} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-slate-400 outline-none text-sm text-slate-700">
                                 <option value="">-- Select Term --</option>
-                                {terms.map(t => <option key={t.id} value={`${t.yearFrom}-${t.yearTo}`}>{`${t.yearFrom.split('-')[0]}-${t.yearTo.split('-')[0]}`}</option>)}
+                                {sortedTerms.map(t => <option key={t.id} value={`${t.yearFrom}-${t.yearTo}`}>{`${t.yearFrom.split('-')[0]}-${t.yearTo.split('-')[0]}`}</option>)}
                             </select>
                         </div>
                     </div>
