@@ -45,7 +45,7 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
         const isResolution = lowerData.includes('resolution') || lowerData.includes('res.');
 
         if (isOrdinance && !isResolution) {
-            alert('Error: This QR code appears to be for an Ordinance. You are currently adding a Resolution.');
+            alert('Invalid Entry');
             return;
         }
 
@@ -62,7 +62,7 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
             title = parts[1].trim();
             term = parts[2].trim();
         } else {
-            alert('Invalid QR Code format. Expected: [Type|]No.|Title|Term');
+            alert('Invalid Entry');
             return;
         }
 
