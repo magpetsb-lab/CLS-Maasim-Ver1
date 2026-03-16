@@ -48,7 +48,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                         autoFocus
                     />
                     <p className="text-xs text-slate-500 mt-4 text-center">
-                        Format: No.|Title|Term
+                        Format: [Type|]No.|Title|Term
                     </p>
                 </form>
             </div>

@@ -40,18 +40,39 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
     }, [initialData]);
 
     const handleScan = (data: string) => {
-        const parts = data.split('|');
-        if (parts.length >= 3) {
-            setFormData(prev => ({
-                ...prev,
-                resolutionNumber: parts[0].trim(),
-                resolutionTitle: parts[1].trim(),
-                term: parts[2].trim()
-            }));
-            setIsScanning(false);
-        } else {
-            alert('Invalid QR Code format. Expected: No.|Title|Term');
+        const lowerData = data.toLowerCase();
+        const isOrdinance = lowerData.includes('ordinance') || lowerData.includes('ord.');
+        const isResolution = lowerData.includes('resolution') || lowerData.includes('res.');
+
+        if (isOrdinance && !isResolution) {
+            alert('Error: This QR code appears to be for an Ordinance. You are currently adding a Resolution.');
+            return;
         }
+
+        const parts = data.split('|');
+        let no = '', title = '', term = '';
+
+        if (parts.length >= 4) {
+            // Assume Type|No|Title|Term
+            no = parts[1].trim();
+            title = parts[2].trim();
+            term = parts[3].trim();
+        } else if (parts.length === 3) {
+            no = parts[0].trim();
+            title = parts[1].trim();
+            term = parts[2].trim();
+        } else {
+            alert('Invalid QR Code format. Expected: [Type|]No.|Title|Term');
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            resolutionNumber: no,
+            resolutionTitle: title,
+            term: term
+        }));
+        setIsScanning(false);
     };
 
     const sortedTerms = useMemo(() => {
