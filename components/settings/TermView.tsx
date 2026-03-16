@@ -52,6 +52,12 @@ const TermView: React.FC<TermViewProps> = (props) => {
         );
     }
 
+    const sortedTerms = [...props.terms].sort((a, b) => {
+        const aYear = parseInt(a.yearFrom.split('-')[0]) || 0;
+        const bYear = parseInt(b.yearFrom.split('-')[0]) || 0;
+        return bYear - aYear;
+    });
+
     return (
         <div>
             <div className="flex justify-between items-center mb-4">
@@ -65,9 +71,9 @@ const TermView: React.FC<TermViewProps> = (props) => {
                     Add New Term
                 </button>
             </div>
-            {props.terms.length > 0 ? (
+            {sortedTerms.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {props.terms.map(term => (
+                    {sortedTerms.map(term => (
                         <TermCard
                             key={term.id}
                             term={term}
