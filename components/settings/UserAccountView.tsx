@@ -56,6 +56,8 @@ const UserAccountView: React.FC<UserAccountViewProps> = (props) => {
         );
     }
 
+    const sortedUserAccounts = [...props.userAccounts].sort((a, b) => a.name.localeCompare(b.name));
+
     return (
         <div>
             <div className="flex justify-between items-center mb-4">
@@ -71,9 +73,9 @@ const UserAccountView: React.FC<UserAccountViewProps> = (props) => {
                     </button>
                 )}
             </div>
-            {props.userAccounts.length > 0 ? (
+            {sortedUserAccounts.length > 0 ? (
                 <div className="space-y-4">
-                    {props.userAccounts.map(user => (
+                    {sortedUserAccounts.map(user => (
                         <UserAccountCard
                             key={user.id} 
                             userAccount={user}

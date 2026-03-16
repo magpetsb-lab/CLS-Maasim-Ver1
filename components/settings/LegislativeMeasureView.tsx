@@ -54,6 +54,8 @@ const LegislativeMeasureView: React.FC<LegislativeMeasureViewProps> = (props) =>
         );
     }
 
+    const sortedMeasures = [...props.legislativeMeasures].sort((a, b) => a.title.localeCompare(b.title));
+
     return (
         <div>
             <div className="flex justify-between items-center mb-4">
@@ -67,9 +69,9 @@ const LegislativeMeasureView: React.FC<LegislativeMeasureViewProps> = (props) =>
                     Add New Measure
                 </button>
             </div>
-            {props.legislativeMeasures.length > 0 ? (
+            {sortedMeasures.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {props.legislativeMeasures.map(measure => (
+                    {sortedMeasures.map(measure => (
                         <LegislativeMeasureCard
                             key={measure.id}
                             measure={measure}

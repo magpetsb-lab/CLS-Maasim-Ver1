@@ -53,6 +53,8 @@ const DocumentTypeView: React.FC<DocumentTypeViewProps> = (props) => {
         );
     }
 
+    const sortedDocumentTypes = [...props.documentTypes].sort((a, b) => a.name.localeCompare(b.name));
+
     return (
         <div>
             <div className="flex justify-between items-center mb-4">
@@ -66,9 +68,9 @@ const DocumentTypeView: React.FC<DocumentTypeViewProps> = (props) => {
                     Add New Type
                 </button>
             </div>
-            {props.documentTypes.length > 0 ? (
+            {sortedDocumentTypes.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {props.documentTypes.map(type => (
+                    {sortedDocumentTypes.map(type => (
                         <DocumentTypeCard
                             key={type.id}
                             documentType={type}

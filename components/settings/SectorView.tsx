@@ -52,6 +52,8 @@ const SectorView: React.FC<SectorViewProps> = (props) => {
         );
     }
 
+    const sortedSectors = [...props.sectors].sort((a, b) => a.name.localeCompare(b.name));
+
     return (
         <div>
             <div className="flex justify-between items-center mb-4">
@@ -65,9 +67,9 @@ const SectorView: React.FC<SectorViewProps> = (props) => {
                     Add New Sector
                 </button>
             </div>
-            {props.sectors.length > 0 ? (
+            {sortedSectors.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {props.sectors.map(sector => (
+                    {sortedSectors.map(sector => (
                         <SectorCard
                             key={sector.id}
                             sector={sector}

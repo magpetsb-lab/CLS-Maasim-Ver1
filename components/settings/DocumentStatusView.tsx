@@ -53,6 +53,8 @@ const DocumentStatusView: React.FC<DocumentStatusViewProps> = (props) => {
         );
     }
 
+    const sortedDocumentStatuses = [...props.documentStatuses].sort((a, b) => a.name.localeCompare(b.name));
+
     return (
         <div>
             <div className="flex justify-between items-center mb-4">
@@ -66,9 +68,9 @@ const DocumentStatusView: React.FC<DocumentStatusViewProps> = (props) => {
                     Add New Status
                 </button>
             </div>
-            {props.documentStatuses.length > 0 ? (
+            {sortedDocumentStatuses.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {props.documentStatuses.map(status => (
+                    {sortedDocumentStatuses.map(status => (
                         <DocumentStatusCard
                             key={status.id}
                             documentStatus={status}
