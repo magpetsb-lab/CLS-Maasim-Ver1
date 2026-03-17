@@ -259,6 +259,35 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
         }
     };
 
+    const handleWordExport = () => {
+        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title></head><body>";
+        const footer = "</body></html>";
+        
+        const content = `
+            <div style="text-align: center; font-family: Arial, sans-serif;">
+                <p style="font-size: 10pt; font-weight: bold; margin: 0;">MUNICIPALITY OF MAASIM</p>
+                <p style="font-size: 12pt; font-weight: bold; margin: 0;">OFFICE OF THE SANGGUNIANG BAYAN</p>
+                <p style="font-size: 9pt; margin: 0;">Province of Sarangani</p>
+                <hr style="margin-top: 15px; margin-bottom: 20px;" />
+                <h2 style="font-size: 14pt; margin-bottom: 5px;">LEGISLATIVE JOURNAL</h2>
+                <p style="font-size: 11pt; margin: 0;">${formData.sessionType} Session No. ${formData.sessionNumber}</p>
+                <p style="font-size: 11pt; margin: 0;">${formData.sessionDate}</p>
+            </div>
+            <div style="margin-top: 30px; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; white-space: pre-wrap;">
+                ${formData.minutesContent.replace(/\n/g, '<br>')}
+            </div>
+        `;
+
+        const sourceHTML = header + content + footer;
+        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+        const fileDownload = document.createElement("a");
+        document.body.appendChild(fileDownload);
+        fileDownload.href = source;
+        fileDownload.download = `Journal_${formData.sessionType}_${formData.sessionNumber}_${formData.sessionDate}.doc`;
+        fileDownload.click();
+        document.body.removeChild(fileDownload);
+    };
+
     const handleSave = async () => {
         const dataToSave = { ...formData };
         if (audioFile) dataToSave.audioFilePath = URL.createObjectURL(audioFile);
@@ -567,6 +596,10 @@ const TranscribedMinutesForm: React.FC<TranscribedMinutesFormProps> = ({ initial
                     <button type="button" onClick={() => handlePdfExport(false)} className="flex-grow px-6 py-2.5 bg-white text-slate-700 font-bold text-xs uppercase rounded-lg border border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         PDF Report
+                    </button>
+                    <button type="button" onClick={handleWordExport} className="flex-grow px-6 py-2.5 bg-white text-blue-700 font-bold text-xs uppercase rounded-lg border border-blue-300 hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        Download Word
                     </button>
                     <button type="button" onClick={() => handlePdfExport(true)} className="flex-grow px-6 py-2.5 bg-slate-800 text-white font-bold text-xs uppercase rounded-lg shadow hover:bg-slate-900 transition-all flex items-center justify-center gap-2">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 002 2v4a2 2 0 00-2 2v4h10z" /></svg>
