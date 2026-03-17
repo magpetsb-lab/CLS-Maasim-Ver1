@@ -38,25 +38,6 @@ const TranscribedMinutesCard: React.FC<TranscribedMinutesCardProps> = ({ session
                             {sessionMinute.sessionType}
                         </span>
                     </div>
-                    
-                    {sessionMinute.audioFilePath && (
-                        <div className="mb-2 p-2 bg-indigo-50 border border-indigo-100 rounded-md">
-                            <p className="text-xs font-bold text-indigo-700 uppercase mb-1">Session Audio Recording</p>
-                            <audio controls src={sessionMinute.audioFilePath} className="w-full h-6" />
-                        </div>
-                    )}
-
-                    {sessionMinute.minutesContent ? (
-                        <div className="mb-1 p-3 bg-slate-50 border border-slate-200 rounded-md shadow-inner">
-                            <p className="text-sm text-slate-800 whitespace-pre-wrap line-clamp-3 font-serif leading-relaxed">
-                                {sessionMinute.minutesContent}
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="mb-1 p-3 bg-slate-50 border border-slate-200 rounded-md border-dashed flex items-center justify-center">
-                            <p className="text-xs text-slate-400 italic">No transcribed content available.</p>
-                        </div>
-                    )}
                 </div>
                 <div className="flex-shrink-0 flex items-center space-x-2 mt-2 sm:mt-0 self-start sm:self-center">
                     <button 
