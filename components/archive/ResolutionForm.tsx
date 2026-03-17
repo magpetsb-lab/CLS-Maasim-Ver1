@@ -83,21 +83,42 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
         });
     }, [terms]);
 
-    const availableAuthors = useMemo(() => {
-        if (!formData.term) return legislators;
-        return legislators.filter(l => l.positions.some(p => p.term === formData.term));
-    }, [legislators, formData.term]);
-
     const availableCommittees = useMemo(() => {
-        if (!formData.term) return committeeMemberships.map(c => c.committeeName);
-        // Filter committees by term year if needed, but for now just list names
-        // Assuming committeeMemberships has termYear which matches term format
-        return Array.from(new Set(committeeMemberships.map(c => c.committeeName)));
+        if (!formData.term) return Array.from(new Set(committeeMemberships.map(c => c.committeeName)));
+        return Array.from(new Set(committeeMemberships.filter(c => c.termYear === formData.term).map(c => c.committeeName)));
     }, [committeeMemberships, formData.term]);
+
+    const availableAuthors = useMemo(() => {
+        let filtered = legislators;
+        if (formData.term) {
+            filtered = filtered.filter(l => l.positions.some(p => p.term === formData.term));
+        }
+        if (formData.committee && formData.term) {
+            const committee = committeeMemberships.find(c => c.committeeName === formData.committee && c.termYear === formData.term);
+            if (committee) {
+                const memberIds = new Set([
+                    committee.chairman,
+                    committee.viceChairman,
+                    ...(committee.members || [])
+                ].filter(Boolean));
+                filtered = filtered.filter(l => memberIds.has(l.id));
+            }
+        }
+        return filtered;
+    }, [legislators, formData.term, formData.committee, committeeMemberships]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => {
+            const newData = { ...prev, [name]: value };
+            if (name === 'term') {
+                newData.committee = '';
+                newData.author = '';
+            } else if (name === 'committee') {
+                newData.author = '';
+            }
+            return newData;
+        });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,12 +220,16 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
                                 const startYear = term.yearFrom.split('-')[0];
                                 const endYear = term.yearTo.split('-')[0];
                                 return (
-                                    <option key={term.id} value={`${startYear}-${endYear}`}>
+                                    <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
                                         {startYear}-{endYear}
                                     </option>
                                 );
                             })}
                         </select>
+                    </div>
+                    <div className="md:col-span-2">
+                        <label htmlFor="resolutionTitle" className={labelClasses}>Resolution Title</label>
+                        <textarea id="resolutionTitle" name="resolutionTitle" value={formData.resolutionTitle} onChange={handleChange} rows={3} className={inputClasses} required />
                     </div>
                     <div>
                         <label htmlFor="dateEnacted" className={labelClasses}>Date Enacted</label>
@@ -213,10 +238,6 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
                     <div>
                         <label htmlFor="dateApproved" className={labelClasses}>Date Approved</label>
                         <input type="date" id="dateApproved" name="dateApproved" value={formData.dateApproved} onChange={handleChange} className={inputClasses} required />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label htmlFor="resolutionTitle" className={labelClasses}>Resolution Title</label>
-                        <textarea id="resolutionTitle" name="resolutionTitle" value={formData.resolutionTitle} onChange={handleChange} rows={3} className={inputClasses} required />
                     </div>
                     <div>
                         <label htmlFor="author" className={labelClasses}>Author/Sponsor</label>

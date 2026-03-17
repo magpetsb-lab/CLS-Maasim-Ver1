@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Legislator, Term, Position } from '../types';
 import { POSITIONS, COUNCILOR_RANKS } from '../constants';
 
@@ -138,6 +138,14 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
         }
     };
 
+    const sortedTerms = useMemo(() => {
+        return [...terms].sort((a, b) => {
+            const aYear = parseInt(a.yearFrom.split('-')[0]) || 0;
+            const bYear = parseInt(b.yearFrom.split('-')[0]) || 0;
+            return bYear - aYear;
+        });
+    }, [terms]);
+
     const inputClasses = "block w-full px-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm disabled:bg-slate-100";
     const labelClasses = "block text-sm font-medium text-slate-700 mb-1";
 
@@ -201,7 +209,7 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
                                 <label htmlFor="newTerm" className={labelClasses}>Term</label>
                                 <select id="newTerm" name="term" value={newPosition.term} onChange={handleNewPositionChange} className={inputClasses}>
                                     <option value="">-- Select a Term --</option>
-                                    {terms.map(term => {
+                                    {sortedTerms.map((term: Term) => {
                                         const termValue = `${term.yearFrom}-${term.yearTo}`;
                                         const displayLabel = `${term.yearFrom.split('-')[0]}-${term.yearTo.split('-')[0]}`;
                                         return <option key={term.id} value={termValue}>{displayLabel}</option>;

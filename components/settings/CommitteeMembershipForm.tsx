@@ -69,6 +69,14 @@ const CommitteeMembershipForm: React.FC<CommitteeMembershipFormProps> = ({ initi
         return legislators.filter(l => !formData.members.includes(l.id));
     }, [legislators, formData.members]);
 
+    const sortedTerms = useMemo(() => {
+        return [...terms].sort((a, b) => {
+            const aYear = parseInt(a.yearFrom.split('-')[0]) || 0;
+            const bYear = parseInt(b.yearFrom.split('-')[0]) || 0;
+            return bYear - aYear;
+        });
+    }, [terms]);
+
     const inputClasses = "block w-full px-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm";
     const labelClasses = "block text-sm font-medium text-slate-700 mb-1";
 
@@ -94,7 +102,7 @@ const CommitteeMembershipForm: React.FC<CommitteeMembershipFormProps> = ({ initi
                             required
                         >
                             <option value="">-- Select a Term --</option>
-                            {terms.map(term => (
+                            {sortedTerms.map((term: Term) => (
                                 <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
                                     {term.yearFrom.split('-')[0]}-{term.yearTo.split('-')[0]}
                                 </option>
