@@ -1189,7 +1189,7 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
                         {formData.filePath && (
                             <div className="flex items-center gap-2 mb-2 text-sm bg-slate-50 p-2 rounded border border-slate-200">
                                 <span className="text-slate-500 font-medium">Legacy Attachment:</span>
-                                <a href={formData.filePath} target="_blank" rel="noopener noreferrer" className="text-brand-secondary hover:underline truncate max-w-xs">
+                                <a href={formData.filePath} download target="_blank" rel="noopener noreferrer" className="text-brand-secondary hover:underline truncate max-w-xs">
                                     View File
                                 </a>
                                 <button type="button" onClick={handleRemoveLegacyAttachment} className="ml-auto font-semibold text-red-600 hover:text-red-800 text-xs uppercase">Remove</button>

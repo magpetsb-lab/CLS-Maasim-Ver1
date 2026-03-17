@@ -16,6 +16,39 @@ const formatTerm = (term: string) => {
 const CommitteeReportCard: React.FC<CommitteeReportCardProps> = ({ committeeReport, onEdit, onDelete, canDelete }) => {
     const typeColor = committeeReport.committeeType === 'Meeting' ? 'bg-indigo-100 text-indigo-800' : 'bg-purple-100 text-purple-800';
     
+    const handleViewAttachment = (e: React.MouseEvent, dataUrl: string) => {
+        e.preventDefault();
+        if (!dataUrl) return;
+
+        if (dataUrl.startsWith('http')) {
+            window.open(dataUrl, '_blank');
+            return;
+        }
+
+        if (dataUrl.startsWith('data:')) {
+            try {
+                const arr = dataUrl.split(',');
+                const mimeMatch = arr[0].match(/:(.*?);/);
+                const mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                const blob = new Blob([u8arr], { type: mime });
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+            } catch (error) {
+                console.error("Error opening attachment:", error);
+                const win = window.open();
+                if (win) {
+                    win.document.write(`<iframe src="${dataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                }
+            }
+        }
+    };
+
     return (
         <div className="bg-white rounded-lg shadow-md p-4">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
@@ -40,9 +73,8 @@ const CommitteeReportCard: React.FC<CommitteeReportCardProps> = ({ committeeRepo
                      {/* Legacy File Path */}
                      {committeeReport.filePath && !committeeReport.attachments?.length && (
                         <a
-                            href={committeeReport.filePath}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href="#"
+                            onClick={(e) => handleViewAttachment(e, committeeReport.filePath!)}
                             className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center"
                             aria-label="View attached file"
                         >
@@ -59,15 +91,15 @@ const CommitteeReportCard: React.FC<CommitteeReportCardProps> = ({ committeeRepo
                             {committeeReport.attachments.map((att, idx) => (
                                 <a
                                     key={att.id || idx}
-                                    href={att.data}
-                                    download={att.name}
+                                    href="#"
+                                    onClick={(e) => handleViewAttachment(e, att.data)}
                                     className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors inline-flex items-center max-w-[150px] truncate"
                                     title={att.name}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a3 3 0 006 0V7a1 1 0 112 0v4a5 5 0 01-10 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
                                     </svg>
-                                    <span className="truncate">{att.name}</span>
+                                    <span className="truncate">View {att.name}</span>
                                 </a>
                             ))}
                         </div>
