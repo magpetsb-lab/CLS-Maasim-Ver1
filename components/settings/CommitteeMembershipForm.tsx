@@ -31,7 +31,16 @@ const CommitteeMembershipForm: React.FC<CommitteeMembershipFormProps> = ({ initi
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value === 'null' ? null : value }));
+        setFormData(prev => {
+            const updated = { ...prev, [name]: value === 'null' ? null : value };
+            if (name === 'termYear') {
+                updated.chairman = null;
+                updated.viceChairman = null;
+                updated.members = [];
+                setMemberToAdd('');
+            }
+            return updated;
+        });
     };
 
     const handleAddMember = () => {
@@ -65,9 +74,17 @@ const CommitteeMembershipForm: React.FC<CommitteeMembershipFormProps> = ({ initi
     };
 
     const legislatorMap = useMemo(() => new Map(legislators.map(l => [l.id, l.name])), [legislators]);
+    
+    const availableLegislatorsForTerm = useMemo(() => {
+        if (!formData.termYear) return legislators;
+        return legislators.filter(leg => 
+            leg.positions.some(pos => pos.term === formData.termYear)
+        );
+    }, [legislators, formData.termYear]);
+
     const availableMembers = useMemo(() => {
-        return legislators.filter(l => !formData.members.includes(l.id));
-    }, [legislators, formData.members]);
+        return availableLegislatorsForTerm.filter(l => !formData.members.includes(l.id));
+    }, [availableLegislatorsForTerm, formData.members]);
 
     const sortedTerms = useMemo(() => {
         return [...terms].sort((a, b) => {
@@ -111,16 +128,16 @@ const CommitteeMembershipForm: React.FC<CommitteeMembershipFormProps> = ({ initi
                     </div>
                     <div>
                         <label htmlFor="chairman" className={labelClasses}>Chairman</label>
-                        <select id="chairman" name="chairman" value={formData.chairman ?? 'null'} onChange={handleChange} className={inputClasses}>
+                        <select id="chairman" name="chairman" value={formData.chairman ?? 'null'} onChange={handleChange} className={inputClasses} disabled={!formData.termYear}>
                             <option value="null">-- Select Chairman --</option>
-                            {legislators.map(leg => <option key={leg.id} value={leg.id}>{leg.name}</option>)}
+                            {availableLegislatorsForTerm.map(leg => <option key={leg.id} value={leg.id}>{leg.name}</option>)}
                         </select>
                     </div>
                     <div>
                         <label htmlFor="viceChairman" className={labelClasses}>Vice-Chairman</label>
-                        <select id="viceChairman" name="viceChairman" value={formData.viceChairman ?? 'null'} onChange={handleChange} className={inputClasses}>
+                        <select id="viceChairman" name="viceChairman" value={formData.viceChairman ?? 'null'} onChange={handleChange} className={inputClasses} disabled={!formData.termYear}>
                             <option value="null">-- Select Vice-Chairman --</option>
-                            {legislators.map(leg => <option key={leg.id} value={leg.id}>{leg.name}</option>)}
+                            {availableLegislatorsForTerm.map(leg => <option key={leg.id} value={leg.id}>{leg.name}</option>)}
                         </select>
                     </div>
                 </div>
@@ -128,7 +145,7 @@ const CommitteeMembershipForm: React.FC<CommitteeMembershipFormProps> = ({ initi
                 <div className="border-t border-slate-200 pt-6">
                      <label htmlFor="member" className={labelClasses}>Member/s</label>
                      <div className="flex gap-2">
-                        <select id="member" value={memberToAdd} onChange={e => setMemberToAdd(e.target.value)} className={inputClasses}>
+                        <select id="member" value={memberToAdd} onChange={e => setMemberToAdd(e.target.value)} className={inputClasses} disabled={!formData.termYear}>
                            <option value="">-- Select a member to add --</option>
                            {availableMembers.map(leg => <option key={leg.id} value={leg.id}>{leg.name}</option>)}
                         </select>
@@ -141,7 +158,7 @@ const CommitteeMembershipForm: React.FC<CommitteeMembershipFormProps> = ({ initi
                                 <button type="button" onClick={() => handleRemoveMember(id)} className="text-red-500 hover:text-red-700 font-bold">&times;</button>
                             </li>
                         ))}
-                         {formData.members.length === 0 && <p className="text-sm text-slate-400 italic mt-2">No members added yet.</p>}
+                         {formData.members.length === 0 && <p className="text-sm text-slate-400 italic mt-2">No member/s added yet.</p>}
                      </ul>
                 </div>
                 

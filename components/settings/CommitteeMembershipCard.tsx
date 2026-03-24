@@ -44,13 +44,13 @@ const CommitteeMembershipCard: React.FC<CommitteeMembershipCardProps> = ({ commi
                              <p className="text-slate-600">{viceChairmanName}</p>
                         </div>
                         <div>
-                             <p className="font-semibold text-slate-700">Members:</p>
+                             <p className="font-semibold text-slate-700">Member/s:</p>
                              {memberNames.length > 0 ? (
                                 <ul className="list-disc list-inside text-slate-600">
                                     {memberNames.map((name, index) => <li key={index}>{name}</li>)}
                                 </ul>
                              ) : (
-                                <p className="text-slate-500 italic">No members assigned</p>
+                                <p className="text-slate-500 italic">No member/s assigned</p>
                              )}
                         </div>
                     </div>
