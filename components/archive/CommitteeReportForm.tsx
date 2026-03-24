@@ -31,7 +31,11 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
 
     useEffect(() => {
         if (initialData) {
-            setFormData({ ...initialData, attachments: initialData.attachments || [] });
+            setFormData({ 
+                ...initialData, 
+                attachments: initialData.attachments || [],
+                attendance: initialData.attendance || { chairman: [], viceChairman: [], members: [], others: [] }
+            });
         } else {
              setFormData(getInitialFormData());
         }
@@ -83,7 +87,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
                 ...prev,
                 [name]: value,
                 ...(name === 'term' && { committee: '' }),
-                attendance: { chairman: [], viceChairman: [], members: [], others: prev.attendance.others }, // Keep others, reset the rest
+                attendance: { chairman: [], viceChairman: [], members: [], others: (prev.attendance?.others || []) }, // Keep others, reset the rest
             }));
         } else if (name === 'committeeType') {
             setFormData(prev => {
@@ -141,7 +145,8 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
 
     const handleAttendanceChange = (role: 'chairman' | 'viceChairman' | 'members', name: string, isChecked: boolean) => {
         setFormData(prev => {
-            const currentAttendees = prev.attendance[role];
+            const currentAttendance = prev.attendance || { chairman: [], viceChairman: [], members: [], others: [] };
+            const currentAttendees = currentAttendance[role] || [];
             const newAttendees = isChecked
                 ? [...currentAttendees, name]
                 : currentAttendees.filter(attendeeName => attendeeName !== name);
@@ -149,7 +154,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
             return {
                 ...prev,
                 attendance: {
-                    ...prev.attendance,
+                    ...currentAttendance,
                     [role]: newAttendees,
                 },
             };
@@ -159,25 +164,31 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
     const handleAddOtherAttendee = () => {
         const name = otherAttendee.trim();
         if (name) {
-            setFormData(prev => ({
-                ...prev,
-                attendance: {
-                    ...prev.attendance,
-                    others: [...prev.attendance.others, name],
-                },
-            }));
+            setFormData(prev => {
+                const currentAttendance = prev.attendance || { chairman: [], viceChairman: [], members: [], others: [] };
+                return {
+                    ...prev,
+                    attendance: {
+                        ...currentAttendance,
+                        others: [...(currentAttendance.others || []), name],
+                    },
+                };
+            });
             setOtherAttendee('');
         }
     };
     
     const handleRemoveOtherAttendee = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            attendance: {
-                ...prev.attendance,
-                others: prev.attendance.others.filter((_, i) => i !== index),
-            },
-        }));
+        setFormData(prev => {
+            const currentAttendance = prev.attendance || { chairman: [], viceChairman: [], members: [], others: [] };
+            return {
+                ...prev,
+                attendance: {
+                    ...currentAttendance,
+                    others: (currentAttendance.others || []).filter((_, i) => i !== index),
+                },
+            };
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -232,7 +243,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
                 <button type="button" onClick={handleAddOtherAttendee} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors flex-shrink-0">Add</button>
             </div>
             <ul className="mt-2 space-y-1">
-                {formData.attendance.others.map((name, index) => (
+                {(formData.attendance?.others || []).map((name, index) => (
                     <li key={`other-${index}`} className="flex justify-between items-center bg-slate-50 p-2 rounded-md text-sm">
                         <span>{name}</span>
                         <button type="button" onClick={() => handleRemoveOtherAttendee(index)} className="text-red-500 hover:text-red-700 font-bold">&times;</button>
@@ -306,7 +317,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
                                             <input
                                                 type="checkbox"
                                                 className="h-5 w-5 rounded border-slate-300 text-brand-secondary focus:ring-brand-secondary"
-                                                checked={formData.attendance.chairman.includes(selectedCommitteeDetails.chairman.name)}
+                                                checked={(formData.attendance?.chairman || []).includes(selectedCommitteeDetails.chairman.name)}
                                                 onChange={(e) => handleAttendanceChange('chairman', selectedCommitteeDetails.chairman!.name, e.target.checked)}
                                             />
                                             <span>{selectedCommitteeDetails.chairman.name}</span>
@@ -322,7 +333,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
                                             <input
                                                 type="checkbox"
                                                 className="h-5 w-5 rounded border-slate-300 text-brand-secondary focus:ring-brand-secondary"
-                                                checked={formData.attendance.viceChairman.includes(selectedCommitteeDetails.viceChairman.name)}
+                                                checked={(formData.attendance?.viceChairman || []).includes(selectedCommitteeDetails.viceChairman.name)}
                                                 onChange={(e) => handleAttendanceChange('viceChairman', selectedCommitteeDetails.viceChairman!.name, e.target.checked)}
                                             />
                                             <span>{selectedCommitteeDetails.viceChairman.name}</span>
@@ -339,7 +350,7 @@ const CommitteeReportForm: React.FC<CommitteeReportFormProps> = ({ initialData, 
                                                 <input
                                                     type="checkbox"
                                                     className="h-5 w-5 rounded border-slate-300 text-brand-secondary focus:ring-brand-secondary"
-                                                    checked={formData.attendance.members.includes(member.name)}
+                                                    checked={(formData.attendance?.members || []).includes(member.name)}
                                                     onChange={(e) => handleAttendanceChange('members', member.name, e.target.checked)}
                                                 />
                                                 <span>{member.name}</span>

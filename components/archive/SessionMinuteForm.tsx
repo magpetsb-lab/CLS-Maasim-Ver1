@@ -29,7 +29,12 @@ const SessionMinuteForm: React.FC<SessionMinuteFormProps> = ({ initialData, onSu
 
     useEffect(() => {
         if (initialData) {
-            setFormData({ ...initialData, minutesContent: initialData.minutesContent || '', attachments: initialData.attachments || [] });
+            setFormData({ 
+                ...initialData, 
+                minutesContent: initialData.minutesContent || '', 
+                attachments: initialData.attachments || [],
+                sessionAttendance: initialData.sessionAttendance || []
+            });
         } else {
              setFormData(getInitialFormData());
         }
@@ -92,12 +97,23 @@ const SessionMinuteForm: React.FC<SessionMinuteFormProps> = ({ initialData, onSu
     };
 
     const handleAttendanceChange = (legislatorId: string, status: AttendanceStatus) => {
-        setFormData(prev => ({
-            ...prev,
-            sessionAttendance: prev.sessionAttendance.map(att => 
-                att.legislatorId === legislatorId ? { ...att, status } : att
-            ),
-        }));
+        setFormData(prev => {
+            const currentAttendance = prev.sessionAttendance || [];
+            const exists = currentAttendance.some(att => att.legislatorId === legislatorId);
+            if (exists) {
+                return {
+                    ...prev,
+                    sessionAttendance: currentAttendance.map(att => 
+                        att.legislatorId === legislatorId ? { ...att, status } : att
+                    ),
+                };
+            } else {
+                return {
+                    ...prev,
+                    sessionAttendance: [...currentAttendance, { legislatorId, status }],
+                };
+            }
+        });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,7 +222,7 @@ const SessionMinuteForm: React.FC<SessionMinuteFormProps> = ({ initialData, onSu
                      {legislatorsForTerm.length > 0 ? (
                         <div className="space-y-3">
                             {legislatorsForTerm.map(legislator => {
-                                const currentStatus = formData.sessionAttendance.find(att => att.legislatorId === legislator.id)?.status;
+                                const currentStatus = (formData.sessionAttendance || []).find(att => att.legislatorId === legislator.id)?.status;
                                 return (
                                     <div key={legislator.id} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2 items-center bg-slate-50 p-3 rounded-lg">
                                         <p className="font-medium text-slate-800">{legislator.name}</p>
