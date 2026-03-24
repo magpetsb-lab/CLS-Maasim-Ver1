@@ -96,57 +96,72 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
     }, [activeTab, props.resolutions, props.ordinances, props.sessionMinutes, props.sessionAgendas, props.committeeReports]);
 
     const filteredResolutions = useMemo(() => {
-        if (!searchQuery) return props.resolutions;
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return props.resolutions.filter(res =>
-            res.resolutionTitle.toLowerCase().includes(lowercasedQuery) ||
-            res.resolutionNumber.toLowerCase().includes(lowercasedQuery) ||
-            res.author.toLowerCase().includes(lowercasedQuery) ||
-            res.committee.toLowerCase().includes(lowercasedQuery) ||
-            res.sector.toLowerCase().includes(lowercasedQuery)
-        );
+        let filtered = props.resolutions;
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            filtered = props.resolutions.filter(res =>
+                res.resolutionTitle.toLowerCase().includes(lowercasedQuery) ||
+                res.resolutionNumber.toLowerCase().includes(lowercasedQuery) ||
+                res.author.toLowerCase().includes(lowercasedQuery) ||
+                res.committee.toLowerCase().includes(lowercasedQuery) ||
+                res.sector.toLowerCase().includes(lowercasedQuery)
+            );
+        }
+        return [...filtered].sort((a, b) => b.resolutionNumber.localeCompare(a.resolutionNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.resolutions]);
 
     const filteredOrdinances = useMemo(() => {
-        if (!searchQuery) return props.ordinances;
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return props.ordinances.filter(ord =>
-            ord.ordinanceTitle.toLowerCase().includes(lowercasedQuery) ||
-            ord.ordinanceNumber.toLowerCase().includes(lowercasedQuery) ||
-            ord.author.toLowerCase().includes(lowercasedQuery) ||
-            ord.committee.toLowerCase().includes(lowercasedQuery)
-        );
+        let filtered = props.ordinances;
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            filtered = props.ordinances.filter(ord =>
+                ord.ordinanceTitle.toLowerCase().includes(lowercasedQuery) ||
+                ord.ordinanceNumber.toLowerCase().includes(lowercasedQuery) ||
+                ord.author.toLowerCase().includes(lowercasedQuery) ||
+                ord.committee.toLowerCase().includes(lowercasedQuery)
+            );
+        }
+        return [...filtered].sort((a, b) => b.ordinanceNumber.localeCompare(a.ordinanceNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.ordinances]);
 
     const filteredSessionMinutes = useMemo(() => {
-        if (!searchQuery) return props.sessionMinutes;
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return props.sessionMinutes.filter(minute =>
-            minute.sessionNumber.toLowerCase().includes(lowercasedQuery) ||
-            minute.sessionDate.toLowerCase().includes(lowercasedQuery) ||
-            minute.sessionType.toLowerCase().includes(lowercasedQuery) ||
-            (minute.minutesContent && minute.minutesContent.toLowerCase().includes(lowercasedQuery))
-        );
+        let filtered = props.sessionMinutes;
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            filtered = props.sessionMinutes.filter(minute =>
+                minute.sessionNumber.toLowerCase().includes(lowercasedQuery) ||
+                minute.sessionDate.toLowerCase().includes(lowercasedQuery) ||
+                minute.sessionType.toLowerCase().includes(lowercasedQuery) ||
+                (minute.minutesContent && minute.minutesContent.toLowerCase().includes(lowercasedQuery))
+            );
+        }
+        return [...filtered].sort((a, b) => b.sessionNumber.localeCompare(a.sessionNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.sessionMinutes]);
 
     const filteredSessionAgendas = useMemo(() => {
-        if (!searchQuery) return props.sessionAgendas;
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return props.sessionAgendas.filter(agenda =>
-            agenda.seriesNumber.toLowerCase().includes(lowercasedQuery) ||
-            agenda.sessionDate.toLowerCase().includes(lowercasedQuery) ||
-            agenda.sessionType.toLowerCase().includes(lowercasedQuery)
-        );
+        let filtered = props.sessionAgendas;
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            filtered = props.sessionAgendas.filter(agenda =>
+                agenda.seriesNumber.toLowerCase().includes(lowercasedQuery) ||
+                agenda.sessionDate.toLowerCase().includes(lowercasedQuery) ||
+                agenda.sessionType.toLowerCase().includes(lowercasedQuery)
+            );
+        }
+        return [...filtered].sort((a, b) => b.seriesNumber.localeCompare(a.seriesNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.sessionAgendas]);
 
     const filteredCommitteeReports = useMemo(() => {
-        if (!searchQuery) return props.committeeReports;
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return props.committeeReports.filter(report =>
-            report.reportNumber.toLowerCase().includes(lowercasedQuery) ||
-            report.committee.toLowerCase().includes(lowercasedQuery) ||
-            report.committeeType.toLowerCase().includes(lowercasedQuery)
-        );
+        let filtered = props.committeeReports;
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            filtered = props.committeeReports.filter(report =>
+                report.reportNumber.toLowerCase().includes(lowercasedQuery) ||
+                report.committee.toLowerCase().includes(lowercasedQuery) ||
+                report.committeeType.toLowerCase().includes(lowercasedQuery)
+            );
+        }
+        return [...filtered].sort((a, b) => b.reportNumber.localeCompare(a.reportNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.committeeReports]);
 
     const getSearchPlaceholder = () => {
