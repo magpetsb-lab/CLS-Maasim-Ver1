@@ -107,6 +107,7 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
                     onSubmit={handleSave}
                     onCancel={handleCancel}
                     terms={props.terms}
+                    legislators={props.legislators}
                 />
             );
         }

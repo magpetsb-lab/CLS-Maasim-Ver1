@@ -7,6 +7,7 @@ interface LegislationDetailProps {
     onSubmit: (data: Omit<Legislator, 'id'> | Legislator) => void;
     onCancel: () => void;
     terms: Term[];
+    legislators: Legislator[];
 }
 
 const getInitialFormData = (): Omit<Legislator, 'id'> => ({
@@ -25,7 +26,7 @@ const getInitialPositionData = () => ({
 });
 
 
-const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSubmit, onCancel, terms }) => {
+const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSubmit, onCancel, terms, legislators }) => {
     const [formData, setFormData] = useState<Omit<Legislator, 'id'> | Legislator>(getInitialFormData());
     const [profileImage, setProfileImage] = useState<File | null>(null);
     const [newPosition, setNewPosition] = useState(getInitialPositionData());
@@ -50,12 +51,40 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
         setFormData(prev => ({ ...prev, [name]: value }));
     };
     
+    const availableRanks = useMemo(() => {
+        if (newPosition.title !== 'Councilor' || !newPosition.term) {
+            return COUNCILOR_RANKS;
+        }
+        const takenRanks = new Set<string>();
+        legislators.forEach(leg => {
+            if (initialData && leg.id === initialData.id) return; // Skip current legislator's saved positions
+            leg.positions.forEach(pos => {
+                if (pos.title === 'Councilor' && pos.term === newPosition.term) {
+                    takenRanks.add(pos.rank);
+                }
+            });
+        });
+        
+        // Also check positions currently being added in formData
+        formData.positions?.forEach(pos => {
+            if (pos.title === 'Councilor' && pos.term === newPosition.term) {
+                takenRanks.add(pos.rank);
+            }
+        });
+
+        return COUNCILOR_RANKS.filter(rank => !takenRanks.has(rank));
+    }, [newPosition.title, newPosition.term, legislators, formData.positions, initialData]);
+
     const handleNewPositionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const { name, value } = e.target;
         setNewPosition(prev => {
             const updated = { ...prev, [name]: value };
-            if (name === 'title') {
-                updated.rank = value === 'Councilor' ? '' : 'N/A';
+            if (name === 'title' || name === 'term') {
+                if (updated.title === 'Councilor' && updated.term) {
+                    updated.rank = ''; // Reset rank so user has to select
+                } else if (updated.title !== 'Councilor') {
+                    updated.rank = 'N/A';
+                }
             }
             return updated;
         });
@@ -224,12 +253,12 @@ const LegislationDetail: React.FC<LegislationDetailProps> = ({ initialData, onSu
                                     value={newPosition.rank} 
                                     onChange={handleNewPositionChange} 
                                     className={inputClasses}
-                                    disabled={newPosition.title !== 'Councilor'}
+                                    disabled={newPosition.title !== 'Councilor' || !newPosition.term}
                                 >
                                     {newPosition.title === 'Councilor' ? (
                                         <>
                                             <option value="" disabled>-- Select Rank --</option>
-                                            {COUNCILOR_RANKS.map((r: string) => <option key={r} value={r}>{r}</option>)}
+                                            {availableRanks.map((r: string) => <option key={r} value={r}>{r}</option>)}
                                         </>
                                     ) : (
                                         <option value="N/A">N/A</option>
