@@ -727,9 +727,17 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             } else {
                 tableColumn = ["Term", "Date Approved", "Doc No.", "Title", "Author", "Sector"];
                 tableRows = filteredData.map(item => [formatTerm(item.term), item.date, item.type === 'Resolution' ? `Res. ${item.number}` : `Ord. ${item.number}`, item.title, item.author, item.sector]);
+                columnStyles = {
+                    0: { cellWidth: 20 },
+                    1: { cellWidth: 25 },
+                    2: { cellWidth: 25 },
+                    3: { cellWidth: 'auto' },
+                    4: { cellWidth: 40 },
+                    5: { cellWidth: 30 }
+                };
             }
             if (!(doc as any).autoTable) return alert("AutoTable plugin not loaded.");
-            (doc as any).autoTable({ head: [tableColumn], body: tableRows, startY: startY, theme: 'grid', headStyles: { fillColor: [30, 58, 138] }, styles: { fontSize: 8 }, didDrawPage: function (data: any) {
+            (doc as any).autoTable({ head: [tableColumn], body: tableRows, startY: startY, theme: 'grid', headStyles: { fillColor: [30, 58, 138] }, styles: { fontSize: 8 }, columnStyles: columnStyles, didDrawPage: function (data: any) {
                 var str = "Page " + doc.internal.getNumberOfPages();
                 doc.setFontSize(7);
                 doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 8);
@@ -936,7 +944,11 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                                 </thead>
                                 <tbody>
                                     {filteredData.slice(0, 15).map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50 transition-colors"><td className="border-b border-slate-100 px-4 py-2 text-sm text-slate-700 font-medium"><span className="text-brand-secondary font-bold mr-2">[{item.number}]</span> {item.title}</td></tr>
+                                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                            <td className="border-b border-slate-100 px-4 py-2 text-sm text-slate-700 font-medium whitespace-normal break-words max-w-xl">
+                                                <span className="text-brand-secondary font-bold mr-2">[{item.number}]</span> {item.title}
+                                            </td>
+                                        </tr>
                                     ))}
                                     {attendanceData.slice(0, 15).map((stat, idx) => (
                                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
