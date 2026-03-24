@@ -84,7 +84,7 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
     }, [terms]);
 
     const availableCommittees = useMemo(() => {
-        if (!formData.term) return Array.from(new Set(committeeMemberships.map(c => c.committeeName)));
+        if (!formData.term) return [];
         return Array.from(new Set(committeeMemberships.filter(c => c.termYear === formData.term).map(c => c.committeeName)));
     }, [committeeMemberships, formData.term]);
 
@@ -246,20 +246,20 @@ const ResolutionForm: React.FC<ResolutionFormProps> = ({ initialData, onSubmit, 
                         <input type="date" id="dateApproved" name="dateApproved" value={formData.dateApproved} onChange={handleChange} className={inputClasses} required />
                     </div>
                     <div>
-                        <label htmlFor="author" className={labelClasses}>Author/Sponsor</label>
-                        <select id="author" name="author" value={formData.author} onChange={handleChange} className={inputClasses} required>
-                            <option value="" disabled>-- Select Author --</option>
-                            {availableAuthors.map(legislator => (
-                                <option key={legislator.id} value={legislator.name}>{legislator.name}</option>
+                        <label htmlFor="committee" className={labelClasses}>Committee</label>
+                        <select id="committee" name="committee" value={formData.committee} onChange={handleChange} className={inputClasses} required disabled={!formData.term}>
+                            <option value="" disabled>-- Select Committee --</option>
+                            {availableCommittees.map((committee, idx) => (
+                                <option key={idx} value={committee}>{committee}</option>
                             ))}
                         </select>
                     </div>
                     <div>
-                        <label htmlFor="committee" className={labelClasses}>Committee</label>
-                        <select id="committee" name="committee" value={formData.committee} onChange={handleChange} className={inputClasses} required>
-                            <option value="" disabled>-- Select Committee --</option>
-                            {availableCommittees.map((committee, idx) => (
-                                <option key={idx} value={committee}>{committee}</option>
+                        <label htmlFor="author" className={labelClasses}>Author/Sponsor</label>
+                        <select id="author" name="author" value={formData.author} onChange={handleChange} className={inputClasses} required disabled={!formData.committee}>
+                            <option value="" disabled>-- Select Author --</option>
+                            {availableAuthors.map(legislator => (
+                                <option key={legislator.id} value={legislator.name}>{legislator.name}</option>
                             ))}
                         </select>
                     </div>

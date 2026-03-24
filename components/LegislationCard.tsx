@@ -23,9 +23,11 @@ const formatTerm = (term: string) => {
 };
 
 const LegislationCard: React.FC<LegislationCardProps> = ({ legislator, onEdit, onDelete, canDelete, presentTermString }) => {
-  const displayPositions = presentTermString 
-    ? legislator.positions.filter(p => p.term === presentTermString)
-    : legislator.positions;
+  const displayPositions = [...legislator.positions].sort((a, b) => {
+      const aYear = parseInt(a.term.split('-')[0]) || 0;
+      const bYear = parseInt(b.term.split('-')[0]) || 0;
+      return bYear - aYear;
+  });
 
   return (
     <div
@@ -70,16 +72,16 @@ const LegislationCard: React.FC<LegislationCardProps> = ({ legislator, onEdit, o
         {displayPositions.length > 0 ? (
             <div className="w-full mt-2 space-y-2 text-left">
                 {displayPositions.map((pos) => (
-                    <div key={pos.id} className="bg-slate-50 p-2 rounded-md border border-slate-200">
-                        <p className="text-sm font-semibold text-brand-dark">{pos.title}</p>
-                        <div className="text-xs text-slate-500 mt-1 font-mono">
+                    <div key={pos.id} className={`p-2 rounded-md border ${pos.term === presentTermString ? 'bg-brand-light border-brand-primary/30' : 'bg-slate-50 border-slate-200'}`}>
+                        <p className={`text-sm font-semibold ${pos.term === presentTermString ? 'text-brand-primary' : 'text-brand-dark'}`}>{pos.title}</p>
+                        <div className={`text-xs mt-1 font-mono ${pos.term === presentTermString ? 'text-brand-secondary' : 'text-slate-500'}`}>
                             <span>Term: {formatTerm(pos.term)}</span> | <span>{pos.rank}</span>
                         </div>
                     </div>
                 ))}
             </div>
         ) : (
-            <p className="text-sm text-slate-500 mt-2 italic">No positions in present term.</p>
+            <p className="text-sm text-slate-500 mt-2 italic">No positions recorded.</p>
         )}
 
         <div className="flex space-x-2 mt-auto pt-4">

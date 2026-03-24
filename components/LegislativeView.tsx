@@ -70,6 +70,7 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
     const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
     const [selectedLegislator, setSelectedLegislator] = useState<Legislator | null>(null);
     const [activeTab, setActiveTab] = useState<SettingsTab>('profiles');
+    const [profileTermFilter, setProfileTermFilter] = useState<string>('all');
 
     const canDelete = props.currentUserRole === 'admin' || props.currentUserRole === 'developer';
 
@@ -119,20 +120,45 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
         
         const presentTermString = presentTermObj ? `${presentTermObj.yearFrom}-${presentTermObj.yearTo}` : '';
 
-        const sortedLegislators = [...props.legislators].sort((a, b) => a.name.localeCompare(b.name));
+        const sortedLegislators = [...props.legislators]
+            .filter(leg => {
+                if (profileTermFilter === 'all') return true;
+                return leg.positions.some(p => p.term === profileTermFilter);
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        const sortedTerms = [...props.terms].sort((a, b) => {
+            const aYear = parseInt(a.yearFrom.split('-')[0]) || 0;
+            const bYear = parseInt(b.yearFrom.split('-')[0]) || 0;
+            return bYear - aYear;
+        });
 
         return (
             <div>
-                 <div className="flex justify-between items-center mb-4">
+                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                      <p className="text-slate-600">
                         Manage individual legislator and author profiles.
                      </p>
-                    <button
-                        onClick={handleAddNew}
-                        className="px-4 py-2 bg-brand-secondary text-white font-semibold rounded-lg shadow-md hover:bg-brand-primary transition-colors flex-shrink-0"
-                    >
-                        Add New Profile
-                    </button>
+                     <div className="flex items-center gap-4 w-full sm:w-auto">
+                         <select
+                             value={profileTermFilter}
+                             onChange={(e) => setProfileTermFilter(e.target.value)}
+                             className="px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm bg-white"
+                         >
+                             <option value="all">All Terms</option>
+                             {sortedTerms.map(term => (
+                                 <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
+                                     {term.yearFrom.split('-')[0]}-{term.yearTo.split('-')[0]}
+                                 </option>
+                             ))}
+                         </select>
+                        <button
+                            onClick={handleAddNew}
+                            className="px-4 py-2 bg-brand-secondary text-white font-semibold rounded-lg shadow-md hover:bg-brand-primary transition-colors flex-shrink-0"
+                        >
+                            Add New Profile
+                        </button>
+                    </div>
                 </div>
                 {sortedLegislators.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
