@@ -116,7 +116,13 @@ const OrdinanceForm: React.FC<OrdinanceFormProps> = ({ initialData, onSubmit, on
                 newData.committee = '';
                 newData.author = '';
             } else if (name === 'committee') {
-                newData.author = '';
+                const committee = committeeMemberships.find(c => c.committeeName === value && c.termYear === newData.term);
+                if (committee && committee.chairman) {
+                    const chairman = legislators.find(l => l.id === committee.chairman);
+                    newData.author = chairman ? chairman.name : '';
+                } else {
+                    newData.author = '';
+                }
             }
             return newData;
         });
