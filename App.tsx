@@ -430,6 +430,12 @@ const App: React.FC = () => {
 
   const handleDeleteUserAccount = async (userId: string) => {
     if (!canDelete) return showNotification('Admin permission required.', 'error');
+    
+    const targetUser = userAccounts.find(u => u.id === userId);
+    if (targetUser?.role === 'developer' && currentUser?.role !== 'developer') {
+        return showNotification('Only developers can delete developer accounts.', 'error');
+    }
+
     if (window.confirm('Delete this record?')) {
         await dbService.delete('userAccounts', userId);
         setUserAccounts(prev => prev.filter(user => user.id !== userId));

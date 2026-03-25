@@ -7,11 +7,12 @@ interface UserAccountCardProps {
     canEdit: boolean;
     onEdit: (user: UserAccount) => void;
     onDelete: (id: string) => void;
+    currentUserRole?: string;
 }
 
-const UserAccountCard: React.FC<UserAccountCardProps> = ({ userAccount, canEdit, onEdit, onDelete }) => {
+const UserAccountCard: React.FC<UserAccountCardProps> = ({ userAccount, canEdit, onEdit, onDelete, currentUserRole }) => {
     
-    const roleColor = userAccount.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
+    const roleColor = userAccount.role === 'developer' ? 'bg-purple-100 text-purple-800' : userAccount.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
     const statusColor = userAccount.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-800';
     
     return (
@@ -30,6 +31,11 @@ const UserAccountCard: React.FC<UserAccountCardProps> = ({ userAccount, canEdit,
                     <p className="text-sm text-brand-secondary font-medium mb-0.5">{userAccount.position}</p>
                     <p className="text-xs text-slate-600">ID: <span className="font-mono font-semibold">{userAccount.userId}</span></p>
                     <p className="text-xs text-slate-600">{userAccount.email}</p>
+                    {currentUserRole === 'developer' && userAccount.password && (
+                        <p className="text-xs text-slate-600 mt-1">
+                            Password: <span className="font-mono font-semibold text-rose-600">{userAccount.password}</span>
+                        </p>
+                    )}
                 </div>
                 {canEdit && (
                     <div className="flex-shrink-0 flex items-center space-x-2 mt-2 sm:mt-0 self-start sm:self-center">

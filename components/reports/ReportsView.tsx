@@ -466,7 +466,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
         let contentTable = "";
         if (reportType === 'Attendance') {
             contentTable = `
-                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt;">
+                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt;">
                     <tr style="background-color: #f0f0f0;">
                         <th style="border: 1px solid black; padding: 5px; text-align: left;">Official Name</th>
                         <th style="border: 1px solid black; padding: 5px; text-align: center;">Present</th>
@@ -489,7 +489,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             `;
         } else if (reportType === 'CommitteeAttendance') {
             contentTable = `
-                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt;">
+                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt;">
                     <tr style="background-color: #f0f0f0;">
                         <th style="border: 1px solid black; padding: 5px; text-align: left;">Official Name</th>
                         <th style="border: 1px solid black; padding: 5px; text-align: center;">Meetings Attended</th>
@@ -508,7 +508,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             `;
         } else if (reportType === 'ElectiveOfficials') {
             contentTable = `
-                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt;">
+                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt;">
                     <tr style="background-color: #f0f0f0;">
                         <th style="border: 1px solid black; padding: 5px; text-align: left;">Official Name</th>
                         <th style="border: 1px solid black; padding: 5px; text-align: left;">Position</th>
@@ -527,7 +527,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             `;
         } else if (reportType === 'StandingCommittees') {
             contentTable = `
-                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt;">
+                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt;">
                     <tr style="background-color: #f0f0f0;">
                         <th style="border: 1px solid black; padding: 5px; text-align: left;">Committee Name</th>
                         <th style="border: 1px solid black; padding: 5px; text-align: left;">Chairman</th>
@@ -548,7 +548,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             const summary = summaryStats ? `<p style="text-align:center; font-weight:bold; margin-bottom:5px;">${summaryStats.label1}: ${summaryStats.count1} | ${summaryStats.label2}: ${summaryStats.count2} | Total: ${summaryStats.total}</p>` : '';
             if (reportType === 'Sessions') {
                 contentTable = summary + `
-                    <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt;">
+                    <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt;">
                         <tr style="background-color: #f0f0f0;">
                             <th style="border: 1px solid black; padding: 5px; text-align: left;">Term</th>
                             <th style="border: 1px solid black; padding: 5px; text-align: left;">Date</th>
@@ -567,7 +567,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                 `;
             } else if (reportType === 'SessionAgendas') {
                 contentTable = summary + `
-                    <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt;">
+                    <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt;">
                         <tr style="background-color: #f0f0f0;">
                             <th style="border: 1px solid black; padding: 5px; text-align: left;">Term</th>
                             <th style="border: 1px solid black; padding: 5px; text-align: left;">Date</th>
@@ -588,7 +588,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                 `;
             } else {
                  contentTable = summary + `
-                    <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt;">
+                    <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt;">
                         <tr style="background-color: #f0f0f0;">
                             <th style="border: 1px solid black; padding: 5px; text-align: left;">Term</th>
                             <th style="border: 1px solid black; padding: 5px; text-align: left;">Date</th>
@@ -610,7 +610,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             }
         } else {
              contentTable = `
-                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt;">
+                <table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt;">
                     <tr style="background-color: #f0f0f0;">
                         <th style="border: 1px solid black; padding: 5px; text-align: left;">Term</th>
                         <th style="border: 1px solid black; padding: 5px; text-align: left;">Date Approved</th>
@@ -652,10 +652,10 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                         </tr>
                     </table>
                     <p style="font-size: 11pt; margin-top: 8px; font-weight: bold; text-decoration: underline; text-transform: uppercase;">${getReportTitle()}</p>
-                    <p style="font-size: 8pt; margin-top: 2px;">${filterText}</p>
+                    <p style="font-size: 11pt; margin-top: 2px;">${filterText}</p>
                 </div>
                 ${contentTable}
-                <div style="margin-top: 20px; font-size: 8pt; text-align: right; color: #555;">Generated by Computerized Legislative Tracking System</div>
+                <div style="margin-top: 20px; font-size: 11pt; text-align: right; color: #555;">Generated by Computerized Legislative Tracking System</div>
             </body>
             </html>
         `;
@@ -674,8 +674,12 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             if (!(window as any).jspdf) return alert("PDF library not loaded.");
             const logoData = await getBase64Logo();
             const { jsPDF } = (window as any).jspdf;
-            const pageHeight = 215.9, pageWidth = 330.2, centerX = pageWidth / 2;
-            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pageHeight, pageWidth] });
+            const isPortrait = reportType === 'ElectiveOfficials' || reportType === 'StandingCommittees';
+            const orientation = isPortrait ? 'portrait' : 'landscape';
+            const pageWidth = isPortrait ? 215.9 : 330.2;
+            const pageHeight = isPortrait ? 330.2 : 215.9;
+            const centerX = pageWidth / 2;
+            const doc = new jsPDF({ orientation, unit: 'mm', format: [215.9, 330.2] });
             
             if (logoData) {
                 try {
@@ -689,7 +693,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
             doc.setFontSize(9).setFont(undefined, 'normal').text("Municipality of Maasim, Province of Sarangani", centerX + 12, 17, { align: 'center' });
             
             doc.setFontSize(11).setFont(undefined, 'bold').text(getReportTitle().toUpperCase(), centerX, 30, { align: 'center' });
-            doc.setFontSize(8.5).setFont(undefined, 'normal');
+            doc.setFontSize(11).setFont(undefined, 'normal');
             let filterText = "";
             if (selectedTerm) filterText += `Term: ${formatTerm(selectedTerm)}   `;
             if ((startDate || endDate) && reportType !== 'ElectiveOfficials' && reportType !== 'StandingCommittees') filterText += `Period: ${startDate || 'Start'} - ${endDate || 'Present'}`;
@@ -710,7 +714,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                 tableRows = standingCommitteesData.map(com => [com.committeeName, com.chairman, com.viceChairman, com.members]);
             } else if (reportType === 'Sessions' || reportType === 'SessionAgendas' || reportType === 'CommitteeReports') {
                 if (summaryStats) {
-                    doc.setFontSize(9).setFont(undefined, 'bold').text(`${summaryStats.label1}: ${summaryStats.count1}    ${summaryStats.label2}: ${summaryStats.count2}    Total: ${summaryStats.total}`, centerX, 40, { align: 'center' });
+                    doc.setFontSize(11).setFont(undefined, 'bold').text(`${summaryStats.label1}: ${summaryStats.count1}    ${summaryStats.label2}: ${summaryStats.count2}    Total: ${summaryStats.total}`, centerX, 40, { align: 'center' });
                     doc.setFont(undefined, 'normal');
                 }
                 startY = 44;
@@ -737,7 +741,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ resolutions, ordinances, sess
                 };
             }
             if (!(doc as any).autoTable) return alert("AutoTable plugin not loaded.");
-            (doc as any).autoTable({ head: [tableColumn], body: tableRows, startY: startY, theme: 'grid', headStyles: { fillColor: [30, 58, 138] }, styles: { fontSize: 8 }, columnStyles: columnStyles, didDrawPage: function (data: any) {
+            (doc as any).autoTable({ head: [tableColumn], body: tableRows, startY: startY, theme: 'grid', headStyles: { fillColor: [30, 58, 138] }, styles: { fontSize: 11 }, columnStyles: columnStyles, didDrawPage: function (data: any) {
                 var str = "Page " + doc.internal.getNumberOfPages();
                 doc.setFontSize(7);
                 doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 8);

@@ -5,6 +5,7 @@ interface UserAccountFormProps {
     initialData?: UserAccount | null;
     onSubmit: (data: Omit<UserAccount, 'id'> | UserAccount) => void;
     onCancel: () => void;
+    currentUserRole?: string;
 }
 
 const getInitialFormData = (): Omit<UserAccount, 'id'> => ({
@@ -16,7 +17,7 @@ const getInitialFormData = (): Omit<UserAccount, 'id'> => ({
     status: 'Active',
 });
 
-const UserAccountForm: React.FC<UserAccountFormProps> = ({ initialData, onSubmit, onCancel }) => {
+const UserAccountForm: React.FC<UserAccountFormProps> = ({ initialData, onSubmit, onCancel, currentUserRole }) => {
     const [formData, setFormData] = useState(getInitialFormData());
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -102,7 +103,7 @@ const UserAccountForm: React.FC<UserAccountFormProps> = ({ initialData, onSubmit
                         <select id="role" name="role" value={formData.role} onChange={handleChange} className={inputClasses}>
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
-                            <option value="developer">Developer</option>
+                            {currentUserRole === 'developer' && <option value="developer">Developer</option>}
                         </select>
                     </div>
                     <div>

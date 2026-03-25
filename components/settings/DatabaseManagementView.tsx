@@ -168,6 +168,10 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
     };
     
     const handleResetSystem = async () => {
+        if (currentUserRole !== 'developer') {
+            alert("Access Denied. Only developers can reset the system.");
+            return;
+        }
         if (window.confirm('WARNING:\n\nThis action will ERASE ALL LOCAL DATA and restore the system to its initial state. This cannot be undone.\n\nAre you sure you want to proceed?')) {
             setIsResetting(true);
             setErrorDetails(null);
@@ -192,13 +196,9 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
             return;
         }
 
-        // Developer Role Bypass or Password Check
         if (currentUserRole !== 'developer') {
-            const password = prompt("ENTER SYSTEM DEVELOPER PASSWORD to authorize database restoration:");
-            if (password !== "dev_admin_2024") { // Hardcoded developer password
-                alert("Incorrect Developer Password. Access Denied.");
-                return;
-            }
+            alert("Access Denied. Only developers can restore the database.");
+            return;
         }
 
         if (!window.confirm("CRITICAL WARNING:\n\nThis will OVERWRITE all current data with the contents of the backup file. This action cannot be undone.\n\nAre you sure you want to proceed?")) {
@@ -312,7 +312,9 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                         <p className="text-sm text-rose-800 mb-6">These are advanced operations. Use with caution.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <button onClick={handleDownloadCloudBackup} disabled={isDownloading || connectionStatus !== 'CONNECTED'} className="bg-sky-600 text-white px-6 py-4 rounded-2xl font-black text-sm hover:bg-sky-700 transition-all active:scale-95 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">{isDownloading ? 'Downloading...' : 'Download Cloud Backup'}</button>
-                            <button onClick={handleResetSystem} disabled={isResetting} className="bg-rose-600 text-white px-6 py-4 rounded-2xl font-black text-sm hover:bg-rose-700 transition-all active:scale-95 shadow-lg disabled:opacity-50">{isResetting ? 'Resetting...' : 'Reset Local System'}</button>
+                            {currentUserRole === 'developer' && (
+                                <button onClick={handleResetSystem} disabled={isResetting} className="bg-rose-600 text-white px-6 py-4 rounded-2xl font-black text-sm hover:bg-rose-700 transition-all active:scale-95 shadow-lg disabled:opacity-50">{isResetting ? 'Resetting...' : 'Reset Local System'}</button>
+                            )}
                         </div>
                          {connectionStatus !== 'CONNECTED' && <p className="text-xs text-rose-600 font-medium text-center mt-4">Cloud backup is disabled. Please connect to the server first.</p>}
                     </div>
@@ -347,24 +349,26 @@ const DatabaseManagementView: React.FC<DatabaseManagementViewProps> = ({ onDatab
                         </p>
                     </div>
 
-                    <div className="bg-white border-2 border-amber-200 rounded-[2.5rem] p-8 shadow-sm">
-                        <h4 className="font-black text-amber-900 uppercase tracking-tight text-base mb-2">Restore Database</h4>
-                        <p className="text-sm text-amber-800 mb-6">Restore the database from a backup file. Requires Developer authorization.</p>
-                        <div className="flex flex-col sm:flex-row gap-4 items-end">
-                            <div className="flex-grow w-full sm:w-auto">
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Select Backup File (.json)</label>
-                                <input 
-                                    type="file" 
-                                    accept=".json"
-                                    onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
-                                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-sm focus:border-amber-500 outline-none shadow-inner bg-slate-50" 
-                                />
+                    {currentUserRole === 'developer' && (
+                        <div className="bg-white border-2 border-amber-200 rounded-[2.5rem] p-8 shadow-sm">
+                            <h4 className="font-black text-amber-900 uppercase tracking-tight text-base mb-2">Restore Database</h4>
+                            <p className="text-sm text-amber-800 mb-6">Restore the database from a backup file. Requires Developer authorization.</p>
+                            <div className="flex flex-col sm:flex-row gap-4 items-end">
+                                <div className="flex-grow w-full sm:w-auto">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Select Backup File (.json)</label>
+                                    <input 
+                                        type="file" 
+                                        accept=".json"
+                                        onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
+                                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl font-mono text-sm focus:border-amber-500 outline-none shadow-inner bg-slate-50" 
+                                    />
+                                </div>
+                                <button onClick={handleRestoreDatabase} disabled={isRestoring || !restoreFile} className="bg-amber-600 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-amber-700 transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {isRestoring ? 'Restoring...' : 'Restore Database'}
+                                </button>
                             </div>
-                            <button onClick={handleRestoreDatabase} disabled={isRestoring || !restoreFile} className="bg-amber-600 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-amber-700 transition-all active:scale-95 shadow-lg flex-shrink-0 h-fit disabled:opacity-50 disabled:cursor-not-allowed">
-                                {isRestoring ? 'Restoring...' : 'Restore Database'}
-                            </button>
                         </div>
-                    </div>
+                    )}
                 </>
             )}
 

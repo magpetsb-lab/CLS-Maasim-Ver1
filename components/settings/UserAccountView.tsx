@@ -51,6 +51,7 @@ const UserAccountView: React.FC<UserAccountViewProps> = (props) => {
                     initialData={selectedUser}
                     onSubmit={handleSave}
                     onCancel={handleCancel}
+                    currentUserRole={props.currentUserRole}
                 />
             </div>
         );
@@ -75,15 +76,19 @@ const UserAccountView: React.FC<UserAccountViewProps> = (props) => {
             </div>
             {sortedUserAccounts.length > 0 ? (
                 <div className="space-y-4">
-                    {sortedUserAccounts.map(user => (
-                        <UserAccountCard
-                            key={user.id} 
-                            userAccount={user}
-                            canEdit={isAdmin}
-                            onEdit={handleEdit} 
-                            onDelete={props.onDeleteUserAccount}
-                        />
-                    ))}
+                    {sortedUserAccounts.map(user => {
+                        const canEditUser = isAdmin && (props.currentUserRole === 'developer' || user.role !== 'developer');
+                        return (
+                            <UserAccountCard
+                                key={user.id} 
+                                userAccount={user}
+                                canEdit={canEditUser}
+                                onEdit={handleEdit} 
+                                onDelete={props.onDeleteUserAccount}
+                                currentUserRole={props.currentUserRole}
+                            />
+                        );
+                    })}
                 </div>
             ) : (
                  <div className="text-center py-16 bg-slate-50 rounded-lg mt-6">

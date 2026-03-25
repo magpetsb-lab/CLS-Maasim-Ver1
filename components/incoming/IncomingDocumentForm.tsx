@@ -188,6 +188,113 @@ const IncomingDocumentForm: React.FC<IncomingDocumentFormProps> = ({ initialData
         return Array.from(new Set(memberships.map(cm => cm.committeeName))).sort();
     }, [committeeMemberships, formData.dateReceived]);
 
+    // Auto-update selections when dateReceived changes
+    useEffect(() => {
+        if (!formData.dateReceived) return;
+
+        setFormData(prev => {
+            let updates: Partial<typeof prev> = {};
+            let isUpdated = false;
+
+            // Check if current viceMayorSignature is still valid
+            if (prev.viceMayorSignature && !availableSignatories.some(leg => leg.name === prev.viceMayorSignature)) {
+                updates.viceMayorSignature = '';
+                isUpdated = true;
+            }
+
+            // Auto-select Vice Mayor if empty
+            if (!prev.viceMayorSignature || updates.viceMayorSignature === '') {
+                const receivedDate = new Date(formData.dateReceived);
+                receivedDate.setHours(0, 0, 0, 0);
+                const receivedYear = receivedDate.getFullYear();
+
+                const viceMayor = availableSignatories.find(leg => 
+                    leg.positions.some(p => {
+                        if (!p.title.toLowerCase().includes('vice mayor')) return false;
+                        
+                        if (!p.term) return false;
+                        const parts = p.term.split('-');
+                        if (parts.length >= 6) {
+                            const startDate = new Date(`${parts[0]}-${parts[1]}-${parts[2]}`);
+                            const endDate = new Date(`${parts[3]}-${parts[4]}-${parts[5]}`);
+                            startDate.setHours(0,0,0,0);
+                            endDate.setHours(0,0,0,0);
+                            return receivedDate >= startDate && receivedDate <= endDate;
+                        }
+                        const years = p.term.match(/(\d{4})/g);
+                        if (years && years.length >= 2) {
+                            const startYear = parseInt(years[0]);
+                            const endYear = parseInt(years[1]);
+                            return receivedYear >= startYear && receivedYear <= endYear;
+                        }
+                        return false;
+                    })
+                );
+                if (viceMayor) {
+                    updates.viceMayorSignature = viceMayor.name;
+                    isUpdated = true;
+                }
+            }
+
+            // Check if current sponsor is still valid
+            if (prev.sponsor && !availableSignatories.some(leg => leg.name === prev.sponsor)) {
+                updates.sponsor = '';
+                isUpdated = true;
+            }
+
+            // Check if current seconder is still valid
+            if (prev.seconder && !availableSignatories.some(leg => leg.name === prev.seconder)) {
+                updates.seconder = '';
+                isUpdated = true;
+            }
+
+            // Check if current committee is still valid
+            let newCommittee = prev.concernedCommittee;
+            if (newCommittee && !availableCommittees.includes(newCommittee)) {
+                updates.concernedCommittee = '';
+                updates.committeeReferralChairman = '';
+                newCommittee = '';
+                isUpdated = true;
+            }
+
+            // If committee is still valid, update the chairman based on the new date
+            if (newCommittee) {
+                let chairmanName = '';
+                let relevantMemberships = committeeMemberships.filter(cm => cm.committeeName === newCommittee);
+                
+                const receivedDate = new Date(formData.dateReceived);
+                receivedDate.setHours(0, 0, 0, 0);
+                
+                const termMatch = relevantMemberships.find(cm => {
+                    const years = cm.termYear ? cm.termYear.match(/(\d{4})/g) : null;
+                    if (years && years.length >= 2) {
+                        const startYear = parseInt(years[0]);
+                        const endYear = parseInt(years[years.length - 1]);
+                        const receivedYear = receivedDate.getFullYear();
+                        return receivedYear >= startYear && receivedYear <= endYear;
+                    }
+                    return false;
+                });
+                
+                if (termMatch) relevantMemberships = [termMatch];
+                
+                const membership = relevantMemberships[0];
+                if (membership && membership.chairman) {
+                    const chairman = legislators.find(l => l.id === membership.chairman);
+                    if (chairman) chairmanName = chairman.name;
+                }
+
+                if (prev.committeeReferralChairman !== chairmanName) {
+                    updates.committeeReferralChairman = chairmanName;
+                    updates.sponsor = chairmanName; // Auto-populate sponsor
+                    isUpdated = true;
+                }
+            }
+
+            return isUpdated ? { ...prev, ...updates } : prev;
+        });
+    }, [formData.dateReceived, availableSignatories, availableCommittees, committeeMemberships, legislators]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
