@@ -560,6 +560,7 @@ const App: React.FC = () => {
                 ordinances={ordinances}
                 incomingDocuments={incomingDocuments}
                 legislators={legislators}
+                terms={terms}
                 onNavigateToSettings={() => setView('settings')}
               />
             )}

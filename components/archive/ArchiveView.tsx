@@ -59,6 +59,17 @@ const TabButton: React.FC<{ label: string; isActive: boolean; onClick: () => voi
 const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
     const [activeTab, setActiveTab] = useState<ArchiveTab>('resolutions');
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [selectedTerm, setSelectedTerm] = useState<string>('');
+
+    const sortedTerms = useMemo(() => {
+        return [...props.terms].sort((a, b) => parseInt(b.yearFrom) - parseInt(a.yearFrom));
+    }, [props.terms]);
+
+    useEffect(() => {
+        if (sortedTerms.length > 0 && !selectedTerm) {
+            setSelectedTerm(`${sortedTerms[0].yearFrom}-${sortedTerms[0].yearTo}`);
+        }
+    }, [sortedTerms, selectedTerm]);
 
     useEffect(() => {
         if (props.draftForCreation) {
@@ -97,9 +108,12 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
 
     const filteredResolutions = useMemo(() => {
         let filtered = props.resolutions;
+        if (selectedTerm) {
+            filtered = filtered.filter(res => res.term === selectedTerm);
+        }
         if (searchQuery) {
             const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = props.resolutions.filter(res =>
+            filtered = filtered.filter(res =>
                 res.resolutionTitle.toLowerCase().includes(lowercasedQuery) ||
                 res.resolutionNumber.toLowerCase().includes(lowercasedQuery) ||
                 res.author.toLowerCase().includes(lowercasedQuery) ||
@@ -108,13 +122,16 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
             );
         }
         return [...filtered].sort((a, b) => b.resolutionNumber.localeCompare(a.resolutionNumber, undefined, { numeric: true, sensitivity: 'base' }));
-    }, [searchQuery, props.resolutions]);
+    }, [searchQuery, props.resolutions, selectedTerm]);
 
     const filteredOrdinances = useMemo(() => {
         let filtered = props.ordinances;
+        if (selectedTerm) {
+            filtered = filtered.filter(ord => ord.term === selectedTerm);
+        }
         if (searchQuery) {
             const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = props.ordinances.filter(ord =>
+            filtered = filtered.filter(ord =>
                 ord.ordinanceTitle.toLowerCase().includes(lowercasedQuery) ||
                 ord.ordinanceNumber.toLowerCase().includes(lowercasedQuery) ||
                 ord.author.toLowerCase().includes(lowercasedQuery) ||
@@ -122,13 +139,16 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
             );
         }
         return [...filtered].sort((a, b) => b.ordinanceNumber.localeCompare(a.ordinanceNumber, undefined, { numeric: true, sensitivity: 'base' }));
-    }, [searchQuery, props.ordinances]);
+    }, [searchQuery, props.ordinances, selectedTerm]);
 
     const filteredSessionMinutes = useMemo(() => {
         let filtered = props.sessionMinutes;
+        if (selectedTerm) {
+            filtered = filtered.filter(minute => minute.term === selectedTerm);
+        }
         if (searchQuery) {
             const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = props.sessionMinutes.filter(minute =>
+            filtered = filtered.filter(minute =>
                 minute.sessionNumber.toLowerCase().includes(lowercasedQuery) ||
                 minute.sessionDate.toLowerCase().includes(lowercasedQuery) ||
                 minute.sessionType.toLowerCase().includes(lowercasedQuery) ||
@@ -136,33 +156,39 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
             );
         }
         return [...filtered].sort((a, b) => b.sessionNumber.localeCompare(a.sessionNumber, undefined, { numeric: true, sensitivity: 'base' }));
-    }, [searchQuery, props.sessionMinutes]);
+    }, [searchQuery, props.sessionMinutes, selectedTerm]);
 
     const filteredSessionAgendas = useMemo(() => {
         let filtered = props.sessionAgendas;
+        if (selectedTerm) {
+            filtered = filtered.filter(agenda => agenda.term === selectedTerm);
+        }
         if (searchQuery) {
             const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = props.sessionAgendas.filter(agenda =>
+            filtered = filtered.filter(agenda =>
                 agenda.seriesNumber.toLowerCase().includes(lowercasedQuery) ||
                 agenda.sessionDate.toLowerCase().includes(lowercasedQuery) ||
                 agenda.sessionType.toLowerCase().includes(lowercasedQuery)
             );
         }
         return [...filtered].sort((a, b) => b.seriesNumber.localeCompare(a.seriesNumber, undefined, { numeric: true, sensitivity: 'base' }));
-    }, [searchQuery, props.sessionAgendas]);
+    }, [searchQuery, props.sessionAgendas, selectedTerm]);
 
     const filteredCommitteeReports = useMemo(() => {
         let filtered = props.committeeReports;
+        if (selectedTerm) {
+            filtered = filtered.filter(report => report.term === selectedTerm);
+        }
         if (searchQuery) {
             const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = props.committeeReports.filter(report =>
+            filtered = filtered.filter(report =>
                 report.reportNumber.toLowerCase().includes(lowercasedQuery) ||
                 report.committee.toLowerCase().includes(lowercasedQuery) ||
                 report.committeeType.toLowerCase().includes(lowercasedQuery)
             );
         }
         return [...filtered].sort((a, b) => b.reportNumber.localeCompare(a.reportNumber, undefined, { numeric: true, sensitivity: 'base' }));
-    }, [searchQuery, props.committeeReports]);
+    }, [searchQuery, props.committeeReports, selectedTerm]);
 
     const getSearchPlaceholder = () => {
         switch(activeTab) {
@@ -194,13 +220,27 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
                             Manage your approved resolutions, ordinances, session minutes, agenda, and committee reports.
                         </p>
                     </div>
-                    <div className="w-full sm:w-72 flex-shrink-0">
-                         <SearchBar 
-                            query={searchQuery}
-                            onQueryChange={setSearchQuery}
-                            placeholder={getSearchPlaceholder()}
-                            suggestions={searchSuggestions}
-                        />
+                    <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-4 flex-shrink-0">
+                        <select
+                            value={selectedTerm}
+                            onChange={(e) => setSelectedTerm(e.target.value)}
+                            className="w-full sm:w-48 px-3 py-2 border border-slate-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm shadow-sm font-medium"
+                        >
+                            <option value="">All Terms</option>
+                            {sortedTerms.map(term => (
+                                <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
+                                    {term.yearFrom.split('-')[0]}-{term.yearTo.split('-')[0]}
+                                </option>
+                            ))}
+                        </select>
+                         <div className="w-full sm:w-72">
+                             <SearchBar 
+                                query={searchQuery}
+                                onQueryChange={setSearchQuery}
+                                placeholder={getSearchPlaceholder()}
+                                suggestions={searchSuggestions}
+                            />
+                        </div>
                     </div>
                 </div>
 

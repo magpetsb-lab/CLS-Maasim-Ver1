@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Resolution, Ordinance, IncomingDocument, Legislator } from '../types';
+import type { Resolution, Ordinance, IncomingDocument, Legislator, Term } from '../types';
 import SearchBar from './SearchBar';
 import SearchResultCard from './SearchResultCard';
 import { dbService } from '../services/db';
@@ -10,6 +10,7 @@ interface MainViewProps {
     ordinances: Ordinance[];
     incomingDocuments: IncomingDocument[];
     legislators: Legislator[];
+    terms: Term[];
     onNavigateToSettings: () => void;
 }
 
@@ -25,12 +26,23 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
     </div>
 );
 
-const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDocuments, legislators, onNavigateToSettings }) => {
+const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDocuments, legislators, terms, onNavigateToSettings }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchFilters, setSearchFilters] = useState({ resolutions: true, ordinances: true });
     const [showScanner, setShowScanner] = useState(false);
     const [scanInput, setScanInput] = useState('');
     const [isLinked, setIsLinked] = useState(true);
+    const [selectedTerm, setSelectedTerm] = useState<string>('');
+
+    const sortedTerms = useMemo(() => {
+        return [...terms].sort((a, b) => parseInt(b.yearFrom) - parseInt(a.yearFrom));
+    }, [terms]);
+
+    useEffect(() => {
+        if (sortedTerms.length > 0 && !selectedTerm) {
+            setSelectedTerm(`${sortedTerms[0].yearFrom}-${sortedTerms[0].yearTo}`);
+        }
+    }, [sortedTerms, selectedTerm]);
 
     useEffect(() => {
         setIsLinked(!!dbService.getServerUrl());
@@ -87,18 +99,46 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
         });
     }, [searchQuery, allDocuments, searchFilters]);
 
+    const filteredResolutionsCount = useMemo(() => {
+        if (!selectedTerm) return resolutions.length;
+        return resolutions.filter(r => r.term === selectedTerm).length;
+    }, [resolutions, selectedTerm]);
+
+    const filteredOrdinancesCount = useMemo(() => {
+        if (!selectedTerm) return ordinances.length;
+        return ordinances.filter(o => o.term === selectedTerm).length;
+    }, [ordinances, selectedTerm]);
+
     return (
         <div className="space-y-6">
+            <div className="flex justify-between items-end mb-2">
+                <div>
+                    <label htmlFor="termFilter" className="block text-sm font-bold text-slate-700 mb-1 uppercase tracking-wider">Select Term</label>
+                    <select
+                        id="termFilter"
+                        value={selectedTerm}
+                        onChange={(e) => setSelectedTerm(e.target.value)}
+                        className="block w-48 px-3 py-2 border border-slate-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm shadow-sm font-medium"
+                    >
+                        <option value="">All Terms</option>
+                        {sortedTerms.map(term => (
+                            <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
+                                {term.yearFrom.split('-')[0]}-{term.yearTo.split('-')[0]}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <StatCard 
                     title="Resolutions" 
-                    value={resolutions.length} 
+                    value={filteredResolutionsCount} 
                     color="bg-blue-100 text-blue-600"
                     icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>} 
                 />
                 <StatCard 
                     title="Ordinances" 
-                    value={ordinances.length}
+                    value={filteredOrdinancesCount}
                     color="bg-green-100 text-green-600"
                     icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>} 
                 />
