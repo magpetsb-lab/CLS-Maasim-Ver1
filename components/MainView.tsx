@@ -39,7 +39,7 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
     }, [terms]);
 
     useEffect(() => {
-        if (sortedTerms.length > 0 && !selectedTerm) {
+        if (sortedTerms.length > 0 && selectedTerm === '') {
             setSelectedTerm(`${sortedTerms[0].yearFrom}-${sortedTerms[0].yearTo}`);
         }
     }, [sortedTerms, selectedTerm]);
@@ -78,12 +78,14 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
             searchText: `${res.resolutionTitle} ${res.resolutionNumber} ${res.author}`.toLowerCase(),
             filePath: res.filePath,
             attachments: res.attachments,
+            term: res.term,
         }));
         const ordList = ordinances.map(ord => ({
             id: ord.id, type: 'Ordinance' as const, title: ord.ordinanceTitle, number: ord.ordinanceNumber, date: ord.dateApproved,
             searchText: `${ord.ordinanceTitle} ${ord.ordinanceNumber} ${ord.author}`.toLowerCase(),
             filePath: ord.filePath,
             attachments: ord.attachments,
+            term: ord.term,
         }));
         return [...resList, ...ordList].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [resolutions, ordinances]);
@@ -91,21 +93,23 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
     const filteredDocuments = useMemo(() => {
         const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(term => term.length > 0);
         return allDocuments.filter(doc => {
+            if (selectedTerm && selectedTerm !== 'all' && doc.term !== selectedTerm) return false;
+            
             const typeMatch = (searchFilters.resolutions && doc.type === 'Resolution') || (searchFilters.ordinances && doc.type === 'Ordinance');
             if (!typeMatch) return false;
             
             if (searchTerms.length === 0) return true;
             return searchTerms.every(term => doc.searchText.includes(term));
         });
-    }, [searchQuery, allDocuments, searchFilters]);
+    }, [searchQuery, allDocuments, searchFilters, selectedTerm]);
 
     const filteredResolutionsCount = useMemo(() => {
-        if (!selectedTerm) return resolutions.length;
+        if (!selectedTerm || selectedTerm === 'all') return resolutions.length;
         return resolutions.filter(r => r.term === selectedTerm).length;
     }, [resolutions, selectedTerm]);
 
     const filteredOrdinancesCount = useMemo(() => {
-        if (!selectedTerm) return ordinances.length;
+        if (!selectedTerm || selectedTerm === 'all') return ordinances.length;
         return ordinances.filter(o => o.term === selectedTerm).length;
     }, [ordinances, selectedTerm]);
 
@@ -120,7 +124,7 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
                         onChange={(e) => setSelectedTerm(e.target.value)}
                         className="block w-48 px-3 py-2 border border-slate-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm shadow-sm font-medium"
                     >
-                        <option value="">All Terms</option>
+                        <option value="all">All Terms</option>
                         {sortedTerms.map(term => (
                             <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
                                 {term.yearFrom.split('-')[0]}-{term.yearTo.split('-')[0]}

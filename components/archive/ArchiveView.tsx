@@ -66,7 +66,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
     }, [props.terms]);
 
     useEffect(() => {
-        if (sortedTerms.length > 0 && !selectedTerm) {
+        if (sortedTerms.length > 0 && selectedTerm === '') {
             setSelectedTerm(`${sortedTerms[0].yearFrom}-${sortedTerms[0].yearTo}`);
         }
     }, [sortedTerms, selectedTerm]);
@@ -108,7 +108,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
 
     const filteredResolutions = useMemo(() => {
         let filtered = props.resolutions;
-        if (selectedTerm) {
+        if (selectedTerm && selectedTerm !== 'all') {
             filtered = filtered.filter(res => res.term === selectedTerm);
         }
         if (searchQuery) {
@@ -126,7 +126,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
 
     const filteredOrdinances = useMemo(() => {
         let filtered = props.ordinances;
-        if (selectedTerm) {
+        if (selectedTerm && selectedTerm !== 'all') {
             filtered = filtered.filter(ord => ord.term === selectedTerm);
         }
         if (searchQuery) {
@@ -143,7 +143,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
 
     const filteredSessionMinutes = useMemo(() => {
         let filtered = props.sessionMinutes;
-        if (selectedTerm) {
+        if (selectedTerm && selectedTerm !== 'all') {
             filtered = filtered.filter(minute => minute.term === selectedTerm);
         }
         if (searchQuery) {
@@ -160,7 +160,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
 
     const filteredSessionAgendas = useMemo(() => {
         let filtered = props.sessionAgendas;
-        if (selectedTerm) {
+        if (selectedTerm && selectedTerm !== 'all') {
             filtered = filtered.filter(agenda => agenda.term === selectedTerm);
         }
         if (searchQuery) {
@@ -176,7 +176,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
 
     const filteredCommitteeReports = useMemo(() => {
         let filtered = props.committeeReports;
-        if (selectedTerm) {
+        if (selectedTerm && selectedTerm !== 'all') {
             filtered = filtered.filter(report => report.term === selectedTerm);
         }
         if (searchQuery) {
@@ -226,7 +226,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
                             onChange={(e) => setSelectedTerm(e.target.value)}
                             className="w-full sm:w-48 px-3 py-2 border border-slate-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary sm:text-sm shadow-sm font-medium"
                         >
-                            <option value="">All Terms</option>
+                            <option value="all">All Terms</option>
                             {sortedTerms.map(term => (
                                 <option key={term.id} value={`${term.yearFrom}-${term.yearTo}`}>
                                     {term.yearFrom.split('-')[0]}-{term.yearTo.split('-')[0]}
