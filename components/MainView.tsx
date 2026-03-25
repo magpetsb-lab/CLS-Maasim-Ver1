@@ -77,10 +77,13 @@ const MainView: React.FC<MainViewProps> = ({ resolutions, ordinances, incomingDo
     }, [resolutions, ordinances]);
 
     const filteredDocuments = useMemo(() => {
+        const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(term => term.length > 0);
         return allDocuments.filter(doc => {
             const typeMatch = (searchFilters.resolutions && doc.type === 'Resolution') || (searchFilters.ordinances && doc.type === 'Ordinance');
             if (!typeMatch) return false;
-            return !searchQuery || doc.searchText.includes(searchQuery.toLowerCase());
+            
+            if (searchTerms.length === 0) return true;
+            return searchTerms.every(term => doc.searchText.includes(term));
         });
     }, [searchQuery, allDocuments, searchFilters]);
 

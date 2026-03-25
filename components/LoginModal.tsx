@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface LoginModalProps {
-  onLogin: (userId: string, password: string) => void;
+  onLogin: (userId: string, password: string) => boolean | void;
   onCancel: () => void;
   error: string | null;
   userCount: number;
@@ -11,10 +11,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onCancel, error, userC
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [isSeeding, setIsSeeding] = useState(false);
+  const userIdInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(userId, password);
+    const success = onLogin(userId, password);
+    if (success === false) {
+      setUserId('');
+      setPassword('');
+      if (userIdInputRef.current) {
+        userIdInputRef.current.focus();
+      }
+    }
   };
 
   const handleSeed = async () => {
@@ -66,6 +74,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onCancel, error, userC
                 <input
                   type="text"
                   id="userId"
+                  ref={userIdInputRef}
                   autoFocus
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}

@@ -108,7 +108,7 @@ const App: React.FC = () => {
     initApp();
   }, [loadAllData]);
 
-  const handleLogin = (userId: string, password: string) => {
+  const handleLogin = (userId: string, password: string): boolean => {
     const user = userAccounts.find(
       (u) => u.userId.toLowerCase() === userId.toLowerCase() && u.password === password
     );
@@ -118,10 +118,13 @@ const App: React.FC = () => {
       setLoginModalOpen(false);
       setLoginError(null);
       setView('main');
+      return true;
     } else if (user && user.status === 'Inactive') {
       setLoginError('This user account is inactive.');
+      return false;
     } else {
       setLoginError('Invalid User ID or password.');
+      return false;
     }
   };
 
