@@ -35,10 +35,7 @@ echo Auto-close feature enabled.
 echo.
 
 echo [4/4] Starting CLTS Server and opening browser...
-echo The CLTS System will open in your default browser shortly.
-
-:: Create a background task to wait 5 seconds then open the browser
-start /B cmd /c "ping 127.0.0.1 -n 6 > nul && start http://localhost:3000"
+echo The CLTS System will open in your default browser automatically.
 
 :: Start the development server
 call npm run dev

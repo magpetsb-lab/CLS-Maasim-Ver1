@@ -8,6 +8,7 @@ import dns from 'dns';
 import fs from 'fs';
 import { fileURLToPath, URL } from 'url';
 import { createRequire } from 'module';
+import { exec } from 'child_process';
 
 import { createServer as createViteServer } from 'vite';
 
@@ -535,6 +536,13 @@ if (process.argv[1] === __filename) {
             console.log(`\n[SYSTEM] Server running on port ${PORT}`);
             console.log(`[SYSTEM] Mode: ${process.env.DATABASE_URL ? 'CLOUD (Postgres)' : 'LOCAL (File DB)'}`);
             console.log(`[SYSTEM] Local URL: http://localhost:${PORT}`);
+            
+            // Auto open browser if AUTO_OPEN is true or running locally
+            if (process.env.NODE_ENV !== 'production') {
+                const url = `http://localhost:${PORT}`;
+                const startCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+                exec(`${startCmd} ${url}`);
+            }
         });
     };
     startServer();
