@@ -109,6 +109,15 @@ const App: React.FC = () => {
     initApp();
   }, [loadAllData]);
 
+  // Handle Auto-Close Heartbeat
+  useEffect(() => {
+    const heartbeatInterval = setInterval(() => {
+        const serverUrl = dbService.getServerUrl() || '';
+        fetch(`${serverUrl}/api/heartbeat`, { method: 'POST' }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(heartbeatInterval);
+  }, []);
+
   const handleLogin = (userId: string, password: string): boolean => {
     const user = userAccounts.find(
       (u) => u.userId.toLowerCase() === userId.toLowerCase() && u.password === password

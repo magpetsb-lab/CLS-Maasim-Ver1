@@ -38,6 +38,25 @@ app.use(express.json({ limit: '100mb' }));
 // 3. STATIC FILE SERVING (Handled in startServer based on env)
 
 // ==========================================
+// AUTO-CLOSE MECHANISM
+// ==========================================
+if (process.env.AUTO_CLOSE === 'true') {
+    let lastHeartbeat = Date.now() + 30000; // 30 seconds grace period at startup
+    
+    app.post('/api/heartbeat', (req, res) => {
+        lastHeartbeat = Date.now();
+        res.status(200).send('OK');
+    });
+
+    setInterval(() => {
+        if (Date.now() - lastHeartbeat > 15000) {
+            console.log("No active browser tabs detected. Shutting down server...");
+            process.exit(0);
+        }
+    }, 5000);
+}
+
+// ==========================================
 // DATABASE ADAPTER SYSTEM
 // ==========================================
 

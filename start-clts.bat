@@ -29,7 +29,9 @@ echo.
 
 echo [3/4] Setting Environment Variables...
 set DATABASE_URL=postgres://postgres:minad2026@localhost:5432/legislative_db
+set AUTO_CLOSE=true
 echo Database URL configured.
+echo Auto-close feature enabled.
 echo.
 
 echo [4/4] Starting CLTS Server and opening browser...
