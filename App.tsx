@@ -10,6 +10,7 @@ import AIAssistantView from './components/ai/AIAssistantView';
 import Notification from './components/Notification';
 import LoginModal from './components/LoginModal';
 import Spinner from './components/Spinner';
+import LoadingScreen from './components/LoadingScreen';
 import { dbService } from './services/db';
 import type { Resolution, Ordinance, SessionMinute, SessionAgenda, CommitteeReport, Legislator, CommitteeMembership, Term, UserAccount, Sector, LegislativeMeasure, IncomingDocument, DocumentType, DocumentStatus } from './types';
 
@@ -469,14 +470,7 @@ const App: React.FC = () => {
   };
 
   if (isInitializing) {
-      return (
-          <div className="min-h-screen bg-brand-light flex flex-col items-center justify-center">
-              <Spinner />
-              <p className="mt-4 text-brand-primary font-bold animate-pulse uppercase tracking-widest text-sm">
-                  Loading Legislative System Data...
-              </p>
-          </div>
-      );
+      return <LoadingScreen />;
   }
 
   if (systemState === 'closed') {

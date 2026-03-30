@@ -4,7 +4,7 @@ cd /d "%~dp0"
 
 title CLTS System Startup
 echo ===================================================
-echo Starting Comprehensive Legislative Tracking System...
+echo Starting Computerized Legislative Tracking System...
 echo ===================================================
 
 echo.
