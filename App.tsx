@@ -111,12 +111,13 @@ const App: React.FC = () => {
 
   // Handle Auto-Close Heartbeat
   useEffect(() => {
+    if (systemState === 'closed') return;
     const heartbeatInterval = setInterval(() => {
         const serverUrl = dbService.getServerUrl() || '';
         fetch(`${serverUrl}/api/heartbeat`, { method: 'POST' }).catch(() => {});
     }, 5000);
     return () => clearInterval(heartbeatInterval);
-  }, []);
+  }, [systemState]);
 
   const handleLogin = (userId: string, password: string): boolean => {
     const user = userAccounts.find(
@@ -487,15 +488,13 @@ const App: React.FC = () => {
         <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white">
             <div className="text-center">
                 <h1 className="text-3xl font-bold mb-8 text-gray-500">System Shutdown</h1>
-                <button 
-                    onClick={() => setSystemState('active')}
-                    className="px-8 py-4 bg-gray-800 rounded-full border-2 border-gray-600 hover:bg-gray-700 hover:border-gray-400 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] group"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 group-hover:text-green-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="px-8 py-4 bg-gray-800 rounded-full border-2 border-gray-600 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                </button>
-                <p className="mt-4 text-sm text-gray-500 uppercase tracking-widest">Power On</p>
+                </div>
+                <p className="mt-4 text-sm text-gray-500 uppercase tracking-widest">Server Stopped</p>
+                <p className="mt-2 text-xs text-gray-600">You may now close this browser tab.</p>
             </div>
         </div>
     );
@@ -517,7 +516,11 @@ const App: React.FC = () => {
                     </svg>
                 </button>
                 <button 
-                    onClick={() => setSystemState('closed')}
+                    onClick={() => {
+                        setSystemState('closed');
+                        const serverUrl = dbService.getServerUrl() || '';
+                        fetch(`${serverUrl}/api/shutdown`, { method: 'POST' }).catch(() => {});
+                    }}
                     className="w-6 h-6 flex items-center justify-center hover:bg-red-600 hover:text-white rounded transition-colors"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">

@@ -41,18 +41,37 @@ app.use(express.json({ limit: '100mb' }));
 // ==========================================
 // AUTO-CLOSE MECHANISM
 // ==========================================
-if (process.env.AUTO_CLOSE === 'true') {
-    let lastHeartbeat = Date.now() + 30000; // 30 seconds grace period at startup
-    
-    app.post('/api/heartbeat', (req, res) => {
-        lastHeartbeat = Date.now();
-        res.status(200).send('OK');
-    });
+let lastHeartbeat = Date.now() + 30000; // 30 seconds grace period at startup
 
+app.post('/api/heartbeat', (req, res) => {
+    lastHeartbeat = Date.now();
+    res.status(200).send('OK');
+});
+
+const shutdownSystem = () => {
+    console.log("Shutting down server and closing CMD window...");
+    if (process.platform === 'win32') {
+        exec('taskkill /F /FI "WINDOWTITLE eq CLTS System Startup*" /T', () => {
+            exec('taskkill /F /FI "WINDOWTITLE eq Legislative System Server*" /T', () => {
+                process.exit(0);
+            });
+        });
+        setTimeout(() => process.exit(0), 1000);
+    } else {
+        process.exit(0);
+    }
+};
+
+app.post('/api/shutdown', (req, res) => {
+    res.status(200).send('Shutting down');
+    setTimeout(shutdownSystem, 500);
+});
+
+if (process.env.AUTO_CLOSE === 'true') {
     setInterval(() => {
         if (Date.now() - lastHeartbeat > 15000) {
-            console.log("No active browser tabs detected. Shutting down server...");
-            process.exit(0);
+            console.log("No active browser tabs detected.");
+            shutdownSystem();
         }
     }, 5000);
 }
@@ -538,10 +557,16 @@ if (process.argv[1] === __filename) {
             console.log(`[SYSTEM] Local URL: http://localhost:${PORT}`);
             
             // Auto open browser if AUTO_OPEN is true or running locally
-            if (process.env.NODE_ENV !== 'production') {
+            if (process.env.NODE_ENV !== 'production' && process.env.AUTO_OPEN !== 'false') {
                 const url = `http://localhost:${PORT}`;
-                const startCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-                exec(`${startCmd} ${url}`);
+                if (process.platform === 'win32' && process.env.CHROME_APP_MODE === 'true') {
+                    exec(`start chrome --app=${url}`, (err) => {
+                        if (err) exec(`start ${url}`);
+                    });
+                } else {
+                    const startCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+                    exec(`${startCmd} ${url}`);
+                }
             }
         });
     };

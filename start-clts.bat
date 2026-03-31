@@ -1,4 +1,7 @@
 @echo off
+:: Auto-minimize the command window
+if not DEFINED IS_MINIMIZED set IS_MINIMIZED=1 && start "" /min "%~dpnx0" %* && exit
+
 :: Change the current working directory to the folder where this batch file is located
 cd /d "%~dp0"
 
@@ -30,14 +33,17 @@ echo.
 echo [3/4] Setting Environment Variables...
 set DATABASE_URL=postgres://postgres:minad2026@localhost:5432/legislative_db
 set AUTO_CLOSE=true
+set CHROME_APP_MODE=true
+set AUTO_OPEN=true
 echo Database URL configured.
 echo Auto-close feature enabled.
 echo.
 
-echo [4/4] Starting CLTS Server and opening browser...
-echo The CLTS System will open in your default browser automatically.
+echo [4/4] Starting CLTS Server and opening Chrome App...
+echo The CLTS System will open in Chrome automatically.
+echo When you close the Chrome App, this window will automatically close.
 
-:: Start the development server
-call npm run dev
+:: Start the server directly with node
+node server.js
 
-pause
+exit
