@@ -112,14 +112,17 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
             filtered = filtered.filter(res => res.term === selectedTerm);
         }
         if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = filtered.filter(res =>
-                res.resolutionTitle.toLowerCase().includes(lowercasedQuery) ||
-                res.resolutionNumber.toLowerCase().includes(lowercasedQuery) ||
-                res.author.toLowerCase().includes(lowercasedQuery) ||
-                res.committee.toLowerCase().includes(lowercasedQuery) ||
-                res.sector.toLowerCase().includes(lowercasedQuery)
-            );
+            const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+            filtered = filtered.filter(res => {
+                const searchableText = [
+                    res.resolutionTitle,
+                    res.resolutionNumber,
+                    res.author,
+                    res.committee,
+                    res.sector
+                ].join(' ').toLowerCase();
+                return searchTerms.every(term => searchableText.includes(term));
+            });
         }
         return [...filtered].sort((a, b) => b.resolutionNumber.localeCompare(a.resolutionNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.resolutions, selectedTerm]);
@@ -130,13 +133,16 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
             filtered = filtered.filter(ord => ord.term === selectedTerm);
         }
         if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = filtered.filter(ord =>
-                ord.ordinanceTitle.toLowerCase().includes(lowercasedQuery) ||
-                ord.ordinanceNumber.toLowerCase().includes(lowercasedQuery) ||
-                ord.author.toLowerCase().includes(lowercasedQuery) ||
-                ord.committee.toLowerCase().includes(lowercasedQuery)
-            );
+            const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+            filtered = filtered.filter(ord => {
+                const searchableText = [
+                    ord.ordinanceTitle,
+                    ord.ordinanceNumber,
+                    ord.author,
+                    ord.committee
+                ].join(' ').toLowerCase();
+                return searchTerms.every(term => searchableText.includes(term));
+            });
         }
         return [...filtered].sort((a, b) => b.ordinanceNumber.localeCompare(a.ordinanceNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.ordinances, selectedTerm]);
@@ -147,13 +153,16 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
             filtered = filtered.filter(minute => minute.term === selectedTerm);
         }
         if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = filtered.filter(minute =>
-                minute.sessionNumber.toLowerCase().includes(lowercasedQuery) ||
-                minute.sessionDate.toLowerCase().includes(lowercasedQuery) ||
-                minute.sessionType.toLowerCase().includes(lowercasedQuery) ||
-                (minute.minutesContent && minute.minutesContent.toLowerCase().includes(lowercasedQuery))
-            );
+            const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+            filtered = filtered.filter(minute => {
+                const searchableText = [
+                    minute.sessionNumber,
+                    minute.sessionDate,
+                    minute.sessionType,
+                    minute.minutesContent || ''
+                ].join(' ').toLowerCase();
+                return searchTerms.every(term => searchableText.includes(term));
+            });
         }
         return [...filtered].sort((a, b) => b.sessionNumber.localeCompare(a.sessionNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.sessionMinutes, selectedTerm]);
@@ -164,12 +173,15 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
             filtered = filtered.filter(agenda => agenda.term === selectedTerm);
         }
         if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = filtered.filter(agenda =>
-                agenda.seriesNumber.toLowerCase().includes(lowercasedQuery) ||
-                agenda.sessionDate.toLowerCase().includes(lowercasedQuery) ||
-                agenda.sessionType.toLowerCase().includes(lowercasedQuery)
-            );
+            const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+            filtered = filtered.filter(agenda => {
+                const searchableText = [
+                    agenda.seriesNumber,
+                    agenda.sessionDate,
+                    agenda.sessionType
+                ].join(' ').toLowerCase();
+                return searchTerms.every(term => searchableText.includes(term));
+            });
         }
         return [...filtered].sort((a, b) => b.seriesNumber.localeCompare(a.seriesNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.sessionAgendas, selectedTerm]);
@@ -180,12 +192,15 @@ const ArchiveView: React.FC<ArchiveViewProps> = (props) => {
             filtered = filtered.filter(report => report.term === selectedTerm);
         }
         if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            filtered = filtered.filter(report =>
-                report.reportNumber.toLowerCase().includes(lowercasedQuery) ||
-                report.committee.toLowerCase().includes(lowercasedQuery) ||
-                report.committeeType.toLowerCase().includes(lowercasedQuery)
-            );
+            const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+            filtered = filtered.filter(report => {
+                const searchableText = [
+                    report.reportNumber,
+                    report.committee,
+                    report.committeeType
+                ].join(' ').toLowerCase();
+                return searchTerms.every(term => searchableText.includes(term));
+            });
         }
         return [...filtered].sort((a, b) => b.reportNumber.localeCompare(a.reportNumber, undefined, { numeric: true, sensitivity: 'base' }));
     }, [searchQuery, props.committeeReports, selectedTerm]);
