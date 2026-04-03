@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { UserAccount } from '../types';
 import { dbService, SyncStatus } from '../services/db';
 
-type View = 'main' | 'settings' | 'archive' | 'reports' | 'incoming' | 'ai';
+type View = 'main' | 'settings' | 'archive' | 'reports' | 'incoming' | 'ai' | 'kiosk';
 
 interface HeaderProps {
     currentView: View;
@@ -150,6 +150,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
                     <NavButton label="AI Assistant" isActive={currentView === 'ai'} onClick={() => onNavigate('ai')} disabled={!currentUser} />
                     <NavButton label="Reports" isActive={currentView === 'reports'} onClick={() => onNavigate('reports')} disabled={!currentUser} />
                     <NavButton label="Settings" isActive={currentView === 'settings'} onClick={() => onNavigate('settings')} disabled={!currentUser} />
+                    <NavButton label="Legislative Inquiry Kiosk" isActive={currentView === 'kiosk'} onClick={() => onNavigate('kiosk')} />
                 </nav>
                 
                 <div className="flex items-center space-x-3">

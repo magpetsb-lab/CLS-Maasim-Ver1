@@ -11,10 +11,11 @@ import Notification from './components/Notification';
 import LoginModal from './components/LoginModal';
 import Spinner from './components/Spinner';
 import LoadingScreen from './components/LoadingScreen';
+import KioskView from './components/KioskView';
 import { dbService } from './services/db';
 import type { Resolution, Ordinance, SessionMinute, SessionAgenda, CommitteeReport, Legislator, CommitteeMembership, Term, UserAccount, Sector, LegislativeMeasure, IncomingDocument, DocumentType, DocumentStatus } from './types';
 
-type View = 'main' | 'settings' | 'archive' | 'reports' | 'incoming' | 'ai';
+type View = 'main' | 'settings' | 'archive' | 'reports' | 'incoming' | 'ai' | 'kiosk';
 
 interface NotificationState {
   message: string;
@@ -550,15 +551,25 @@ const App: React.FC = () => {
       )}
       
       <div className={`flex flex-col flex-grow transition-opacity duration-300 ${systemState === 'active' ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
-          <div className="print:hidden">
-              <Header
-                currentView={view}
-                onNavigate={handleNavigate}
-                currentUser={currentUser}
-                onLoginClick={() => setLoginModalOpen(true)}
-                onLogout={handleLogout}
-              />
-          </div>
+          {view !== 'kiosk' && (
+            <div className="print:hidden">
+                <Header
+                  currentView={view}
+                  onNavigate={handleNavigate}
+                  currentUser={currentUser}
+                  onLoginClick={() => setLoginModalOpen(true)}
+                  onLogout={handleLogout}
+                />
+            </div>
+          )}
+          
+          {view === 'kiosk' ? (
+            <KioskView
+              resolutions={resolutions}
+              ordinances={ordinances}
+              onExit={() => handleNavigate('main')}
+            />
+          ) : (
           <main className="container mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
             {view === 'main' && (
               <MainView
@@ -670,6 +681,7 @@ const App: React.FC = () => {
               />
             )}
           </main>
+          )}
           <footer className="text-center p-4 text-slate-500 text-sm print:hidden mt-auto">
             <p>&copy; {new Date().getFullYear()} Computerized Legislative Tracking System. All rights reserved.</p>
             <div className="mt-2">
