@@ -33,6 +33,7 @@ const VirtualKeyboard: React.FC<{
                             <button 
                                 key={key} 
                                 onClick={() => onKeyPress(key)} 
+                                onMouseDown={(e) => e.preventDefault()}
                                 className="bg-white text-slate-800 text-2xl sm:text-4xl font-black py-5 px-6 sm:px-8 rounded-2xl shadow-sm active:bg-brand-primary active:text-white active:scale-95 transition-all"
                             >
                                 {key}
@@ -41,9 +42,9 @@ const VirtualKeyboard: React.FC<{
                     </div>
                 ))}
                 <div className="flex justify-center gap-3 mt-2">
-                    <button onClick={onClear} className="bg-rose-100 text-rose-700 text-xl sm:text-2xl font-black py-5 px-8 sm:px-12 rounded-2xl shadow-sm active:bg-rose-500 active:text-white active:scale-95 transition-all">CLEAR</button>
-                    <button onClick={() => onKeyPress(' ')} className="bg-white text-slate-800 text-xl sm:text-2xl font-black py-5 px-16 sm:px-32 rounded-2xl shadow-sm active:bg-brand-primary active:text-white active:scale-95 transition-all">SPACE</button>
-                    <button onClick={onBackspace} className="bg-slate-300 text-slate-800 text-xl sm:text-2xl font-black py-5 px-8 sm:px-12 rounded-2xl shadow-sm active:bg-slate-500 active:text-white active:scale-95 transition-all">BACKSPACE</button>
+                    <button onClick={onClear} onMouseDown={(e) => e.preventDefault()} className="bg-rose-100 text-rose-700 text-xl sm:text-2xl font-black py-5 px-8 sm:px-12 rounded-2xl shadow-sm active:bg-rose-500 active:text-white active:scale-95 transition-all">CLEAR</button>
+                    <button onClick={() => onKeyPress(' ')} onMouseDown={(e) => e.preventDefault()} className="bg-white text-slate-800 text-xl sm:text-2xl font-black py-5 px-16 sm:px-32 rounded-2xl shadow-sm active:bg-brand-primary active:text-white active:scale-95 transition-all">SPACE</button>
+                    <button onClick={onBackspace} onMouseDown={(e) => e.preventDefault()} className="bg-slate-300 text-slate-800 text-xl sm:text-2xl font-black py-5 px-8 sm:px-12 rounded-2xl shadow-sm active:bg-slate-500 active:text-white active:scale-95 transition-all">BACKSPACE</button>
                 </div>
             </div>
         </div>
@@ -177,7 +178,10 @@ const KioskView: React.FC<KioskViewProps> = ({ resolutions, ordinances, onExit }
                 <div className="relative mb-8">
                     <div 
                         className={`flex items-center w-full bg-slate-50 border-4 rounded-[2.5rem] py-6 px-8 cursor-text transition-colors ${showKeyboard ? 'border-brand-primary bg-white shadow-inner' : 'border-slate-200'}`}
-                        onClick={() => setShowKeyboard(true)}
+                        onClick={() => {
+                            setShowKeyboard(true);
+                            searchInputRef.current?.focus();
+                        }}
                     >
                         <svg className="w-10 h-10 text-slate-400 mr-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         <input 
@@ -185,7 +189,7 @@ const KioskView: React.FC<KioskViewProps> = ({ resolutions, ordinances, onExit }
                             type="text" 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            readOnly={showKeyboard}
+                            inputMode="none"
                             placeholder={`Tap here to search ${recordType}...`} 
                             className="w-full bg-transparent text-3xl sm:text-4xl font-bold text-slate-800 placeholder-slate-300 focus:outline-none"
                         />

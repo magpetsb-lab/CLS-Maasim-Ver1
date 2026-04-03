@@ -36,6 +36,7 @@ const NavButton: React.FC<{
 const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, onLoginClick, onLogout }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(dbService.getStatus());
+  const [kioskEnabled, setKioskEnabled] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -43,9 +44,18 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
     const handleStatusUpdate = (status: SyncStatus) => setSyncStatus(status);
     dbService.subscribe(handleStatusUpdate);
 
+    const checkKioskState = () => {
+        const stored = localStorage.getItem('kiosk_enabled');
+        setKioskEnabled(stored !== 'false');
+    };
+    
+    checkKioskState();
+    window.addEventListener('kiosk_settings_changed', checkKioskState);
+
     return () => {
       clearInterval(timer);
       dbService.unsubscribe(handleStatusUpdate);
+      window.removeEventListener('kiosk_settings_changed', checkKioskState);
     };
   }, []);
 
@@ -150,7 +160,9 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentUser, o
                     <NavButton label="AI Assistant" isActive={currentView === 'ai'} onClick={() => onNavigate('ai')} disabled={!currentUser} />
                     <NavButton label="Reports" isActive={currentView === 'reports'} onClick={() => onNavigate('reports')} disabled={!currentUser} />
                     <NavButton label="Settings" isActive={currentView === 'settings'} onClick={() => onNavigate('settings')} disabled={!currentUser} />
-                    <NavButton label="Legislative Inquiry Kiosk" isActive={currentView === 'kiosk'} onClick={() => onNavigate('kiosk')} />
+                    {kioskEnabled && (
+                        <NavButton label="Legislative Inquiry Kiosk" isActive={currentView === 'kiosk'} onClick={() => onNavigate('kiosk')} />
+                    )}
                 </nav>
                 
                 <div className="flex items-center space-x-3">

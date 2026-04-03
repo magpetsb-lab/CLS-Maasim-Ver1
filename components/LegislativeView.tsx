@@ -11,6 +11,7 @@ import LegislativeMeasureView from './settings/LegislativeMeasureView';
 import DocumentTypeView from './settings/DocumentTypeView';
 import DocumentStatusView from './settings/DocumentStatusView';
 import DatabaseManagementView from './settings/DatabaseManagementView';
+import SystemSettingsView from './settings/SystemSettingsView';
 
 interface LegislativeViewProps {
     currentUserRole: UserRole;
@@ -50,7 +51,7 @@ interface LegislativeViewProps {
     onPermissionChange?: () => void;
 }
 
-type SettingsTab = 'profiles' | 'committees' | 'terms' | 'accounts' | 'sectors' | 'measures' | 'doctypes' | 'statuses' | 'database';
+type SettingsTab = 'profiles' | 'committees' | 'terms' | 'accounts' | 'sectors' | 'measures' | 'doctypes' | 'statuses' | 'database' | 'system';
 
 const TabButton: React.FC<{ label: string; isActive: boolean; onClick: () => void; }> = ({ label, isActive, onClick }) => (
     <button
@@ -201,6 +202,9 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
                         <TabButton label="Statuses" isActive={activeTab === 'statuses'} onClick={() => setActiveTab('statuses')} />
                         <TabButton label="User Accounts" isActive={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} />
                         <TabButton label="Database & Security" isActive={activeTab === 'database'} onClick={() => setActiveTab('database')} />
+                        {props.currentUserRole === 'developer' && (
+                            <TabButton label="System" isActive={activeTab === 'system'} onClick={() => setActiveTab('system')} />
+                        )}
                     </nav>
                 </div>
                 
@@ -278,6 +282,9 @@ const LegislativeView: React.FC<LegislativeViewProps> = (props) => {
                             onPermissionChange={props.onPermissionChange}
                             currentUserRole={props.currentUserRole}
                         />
+                    )}
+                    {activeTab === 'system' && (
+                        <SystemSettingsView currentUserRole={props.currentUserRole} />
                     )}
                 </div>
             </div>
